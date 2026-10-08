@@ -6,7 +6,7 @@ Career Transition Assistant er en KI-basert jobbsøknadsassistent for studenter,
 
 Behovet oppstår fordi mange unge kandidater har relevant kompetanse, men synes det er vanskelig å koble denne til kravene i stillingsannonser og konkurrere mot søkere med lengre yrkeserfaring. Samtidig er individuell tilpasning av søknader tidkrevende, mens generelle KI-verktøy kan produsere tekster som fremstår standardiserte, generiske eller lite personlige.
 
-Ved å analysere CV, eventuell støttedokumentasjon og en konkret stillingsannonse skal applikasjonen kunne identifisere relevante styrker og kompetansegap, foreslå tilpasninger i CV-en og generere et førsteutkast til søknadsbrev. Målet er å gjøre jobbsøkingen mer målrettet og effektiv uten at brukeren mister kontroll over eget innhold eller personlige uttrykk.
+Ved å analysere CV og en konkret stillingsannonse skal applikasjonen kunne identifisere relevante styrker og kompetansegap, foreslå tilpasninger i CV-en og generere et førsteutkast til søknadsbrev. Målet er å gjøre jobbsøkingen mer målrettet og effektiv uten at brukeren mister kontroll over eget innhold eller personlige uttrykk.
 
 ## The Problem
 
@@ -18,42 +18,47 @@ Konsekvensen kan være at unge kandidater bruker unødvendig mye tid på hver s�
 
 ## The Solution
 
-Løsningen er en KI-basert karriere- og jobbsøknadsassistent for studenter, nyutdannede og unge yrkesaktive med begrenset arbeidserfaring. Brukeren legger inn sin CV, eventuell støttedokumentasjon som attester eller vurderinger, og en konkret stillingsannonse.
+Løsningen er en KI-basert jobbsøknadsassistent for studenter i avsluttende fase av bachelor- eller masterstudium som søker sin første faste jobb. Brukeren limer inn CV-en sin og en konkret stillingsannonse som tekst i applikasjonen.
 
-Applikasjonen analyserer hvordan brukerens bakgrunn samsvarer med kravene i stillingsannonsen, synliggjør relevante styrker og eventuelle kompetansegap, og foreslår hvordan CV-en kan tilpasses. På bakgrunn av brukerens faktiske erfaringer genererer løsningen også et førsteutkast til et tilpasset søknadsbrev som brukeren kan videreutvikle.
+Applikasjonen analyserer hvordan brukerens bakgrunn samsvarer med kravene i stillingsannonsen. Resultatet presenteres som relevante styrker, eventuelle kompetansegap og konkrete forslag til hvordan CV-en kan tilpasses stillingen. På bakgrunn av informasjonen brukeren selv har lagt inn, genererer løsningen også et førsteutkast til et tilpasset søknadsbrev som brukeren kan redigere videre.
 
-Målet er å gjøre jobbsøkingen mer effektiv uten at resultatet blir generisk eller mister brukerens personlige uttrykk. Løsningen skal fungere som støtte i skrive- og tilpasningsprosessen, ikke som en erstatning for brukerens egen vurdering, og skal ikke finne på kvalifikasjoner eller erfaringer som brukeren ikke har.
+For de viktigste forslagene skal brukeren kunne se hvilken del av CV-en og stillingsannonsen forslaget bygger på. Løsningen skal ikke finne på kvalifikasjoner eller erfaringer som ikke finnes i brukerens input.
+
+Første versjon skal kunne brukes uten innlogging og uten at CV, stillingsannonse, analyse eller søknadsutkast lagres. Applikasjonen skal også ha en demomodus med ferdige eksempeldata slik at løsningen kan testes uten egen API-nøkkel.
+
+Målet er å gjøre det enklere for brukeren å forstå og presentere egen kompetanse på en mer målrettet måte, samtidig som brukeren beholder kontroll over innholdet og det personlige uttrykket.
 
 ## What Makes This Different
 
-Løsningen skiller seg fra generelle KI-verktøy ved at den er utviklet spesifikt for unge, nyutdannede og tidlig yrkesaktive som skal tilpasse egen erfaring og kompetanse til en konkret stilling.
+Løsningen skiller seg fra generelle KI-verktøy ved at den er bygget rundt en fast arbeidsflyt for jobbsøking, der brukerens CV sammenlignes direkte med kravene i én konkret stillingsannonse.
 
-I stedet for kun å generere tekst skal applikasjonen først analysere sammenhengen mellom brukerens faktiske bakgrunn og kravene i stillingsannonsen. Forslag til CV-endringer og søknadsutkast skal være forankret i informasjon brukeren selv har gitt.
+I stedet for kun å generere tekst skal applikasjonen først identifisere relevante styrker og kompetansegap, og deretter bruke denne analysen til å foreslå konkrete CV-endringer og generere et tilpasset søknadsutkast.
 
-En sentral del av løsningen er også autentisitet. Målet er ikke å produsere en standardisert KI-søknad, men å hjelpe brukeren med å formulere egne erfaringer mer tydelig og målrettet. Dermed kombineres effektiviteten ved KI med større kontroll over relevans, innhold og personlig uttrykk.
+For de viktigste forslagene skal brukeren kunne se hvilken del av CV-en og hvilken del av stillingsannonsen forslaget bygger på. Dette gjør det enklere å kontrollere at forslagene faktisk er forankret i brukerens egne erfaringer og ikke inneholder oppdiktede kvalifikasjoner.
+
+Målet er dermed ikke bare å generere en søknad, men å gi brukeren en mer strukturert og etterprøvbar prosess for å forstå og presentere egen kompetanse.
 
 ## Who This Serves
 
-Primærbrukerne er studenter, nyutdannede og unge yrkesaktive som har begrenset erfaring med jobbsøking og som ønsker hjelp til å forstå hvordan egen utdanning, erfaring og kompetanse kan kobles til kravene i en konkret stilling.
+Primærbrukeren er en student i avsluttende fase av et bachelor- eller masterstudium som søker sin første faste jobb og har begrenset relevant arbeidserfaring.. Brukeren kan ha erfaring fra deltidsarbeid, praksis, verv, prosjektarbeid eller andre aktiviteter, men være usikker på hvilke deler av denne bakgrunnen som er mest relevante for en konkret stilling og hvordan de bør presenteres.
 
-Brukerne kan ha relevant bakgrunn, men være usikre på hvilke deler som bør fremheves, hvordan de bør formulere seg, og hvordan de kan konkurrere mot kandidater med lengre yrkeserfaring. For dem betyr suksess at de raskere klarer å identifisere relevant kompetanse, lage mer målrettede søknader og presentere seg på en måte som oppleves både profesjonell og personlig.
+Denne brukeren kan ha relevant bakgrunn, men være usikker på hvilke deler som bør fremheves, hvordan de bør formulere seg, og hvordan de kan konkurrere mot kandidater med lengre yrkeserfaring. For brukeren betyr suksess at det blir enklere å identifisere relevant kompetanse, lage mer målrettede søknader og presentere seg på en måte som oppleves både profesjonell og personlig.
 
-Sekundære brukere kan være personer tidlig i karrieren som ønsker å bytte retning og trenger hjelp til å oversette eksisterende kompetanse til nye typer stillinger.
+Sekundære brukere kan være nyutdannede og personer tidlig i karrieren som ønsker å bytte retning og trenger hjelp til å oversette eksisterende kompetanse til nye typer stillinger.
 
 ## Success Criteria
 
-Løsningen skal gjøre det enklere og raskere for brukeren å tilpasse en jobbsøknad til en konkret stilling.
+Første versjon regnes som vellykket dersom brukeren kan:
 
-Første versjon regnes som vellykket dersom en bruker kan:
-
-- legge inn CV og stillingsannonse og gjennomføre hele arbeidsflyten
-- få identifisert relevante styrker og kompetansegap
-- få konkrete forslag til tilpasning av CV
+- lime inn CV og en konkret stillingsannonse som tekst
+- få identifisert relevante styrker som faktisk kan spores tilbake til CV-en
+- få identifisert tydelige kompetansegap opp mot krav i stillingsannonsen
+- få konkrete forslag til hvordan CV-en kan tilpasses stillingen
 - få et førsteutkast til et tilpasset søknadsbrev
-- forstå hvorfor de viktigste forslagene er gitt
-- få forslag som er forankret i brukerens faktiske erfaringer og ikke inneholder oppdiktede kvalifikasjoner
-
-Løsningen bør også redusere tiden det tar å lage en målrettet søknad sammenlignet med å gjennomføre hele prosessen manuelt.
+- se hvilken del av CV-en og stillingsannonsen de viktigste forslagene bygger på
+- få resultater som ikke inneholder kvalifikasjoner eller erfaringer som ikke finnes i brukerens input
+- gjennomføre hele arbeidsflyten uten innlogging eller lagring av personopplysninger
+- bruke en demomodus med ferdige eksempeldata uten egen API-nøkkel
 
 ## Scope
 
@@ -61,20 +66,24 @@ Løsningen bør også redusere tiden det tar å lage en målrettet søknad samme
 
 Første versjon skal gjøre det mulig for brukeren å:
 
-- legge inn eller laste opp CV og grunnleggende informasjon om utdanning, erfaring og kompetanse
-- legge inn en konkret stillingsannonse
+- lime inn CV som tekst
+- lime inn en konkret stillingsannonse som tekst
 - få en analyse av hvordan egen bakgrunn matcher kravene i stillingen
 - få fremhevet relevante styrker og eventuelle kompetansegap
 - få konkrete forslag til hvordan CV-en kan tilpasses stillingen
 - få et førsteutkast til et tilpasset søknadsbrev
-- få en kort forklaring på hvorfor de viktigste forslagene er gitt
-
-Støttedokumentasjon, som attester eller vurderinger fra tidligere arbeidsgivere, kan inkluderes dersom dette lar seg gjennomføre uten å gjøre første versjon for omfattende.
+- se hvilken del av CV-en og stillingsannonsen de viktigste forslagene bygger på
+- bruke løsningen uten innlogging eller lagring av personopplysninger
+- bruke en demomodus med ferdige eksempeldata uten egen API-nøkkel
 
 ### Out for v1
 
 Første versjon skal ikke inkludere:
 
+- opplasting eller lesing av CV i PDF- eller Word-format
+- støttedokumentasjon som attester eller vurderinger
+- innlogging eller brukerprofiler
+- lagring av CV, stillingsannonser, analyser eller søknadsutkast
 - automatisk henting av stillingsannonser fra Finn.no, LinkedIn eller andre eksterne tjenester
 - automatisk innsending av jobbsøknader
 - avansert ATS-optimalisering
@@ -82,6 +91,16 @@ Første versjon skal ikke inkludere:
 - full karriereplanlegging eller forslag til utdanning og kurs
 - avansert historikk eller dashboard for tidligere søknader
 - integrasjon mot e-post, LinkedIn eller eksterne rekrutteringssystemer
+
+## Technical Assumptions
+
+Første versjon skal bruke én ekstern språkmodell gjennom et API for analyse av CV og stillingsannonse, samt generering av forslag og søknadsutkast.
+
+API-nøkkelen skal lagres lokalt i en `.env`-fil og skal ikke pushes til GitHub. En `.env.example`-fil skal vise hvilke variabler som kreves.
+
+Siden språkmodellkall kan koste penger, skal løsningen også ha en demomodus med ferdige eksempeldata og eksempelresultater slik at sensor kan teste hovedflyten uten egen API-nøkkel eller kostnad.
+
+Endelig valg av språkmodell og API bestemmes i arkitekturfasen.
 
 ## Vision
 
