@@ -1,121 +1,142 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
+import { fetchDemoAnalysis } from './api/analyzeApi'
+import ApplicationDraftEditor from './components/ApplicationDraftEditor'
+import InputPreview from './components/InputPreview'
+import JobRequirementsList from './components/JobRequirementsList'
+import ModeSelector from './components/ModeSelector'
+import StatusMessage from './components/StatusMessage'
+import TraceableItemList from './components/TraceableItemList'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [mode, setMode] = useState('demo')
+  const [status, setStatus] = useState('idle') // idle | loading | success | error
+  const [response, setResponse] = useState(null)
+  const [errorMessage, setErrorMessage] = useState(null)
+  const [runId, setRunId] = useState(0)
+
+  useEffect(() => {
+    if (status !== 'loading') return
+
+    const controller = new AbortController()
+
+    fetchDemoAnalysis({ signal: controller.signal })
+      .then((data) => {
+        setResponse(data)
+        setRunId((id) => id + 1)
+        setStatus('success')
+      })
+      .catch((error) => {
+        if (error?.name === 'AbortError') return
+        setErrorMessage(
+          error?.message || 'Noe gikk feil under analysen. Prøv igjen.',
+        )
+        setStatus('error')
+      })
+
+    return () => controller.abort()
+  }, [status])
+
+  const requirementsById = useMemo(() => {
+    const requirements = response?.result?.job_requirements ?? []
+    return Object.fromEntries(requirements.map((req) => [req.id, req]))
+  }, [response])
+
+  function runDemoAnalysis() {
+    setErrorMessage(null)
+    setStatus('loading')
+  }
+
+  const result = response?.result
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app">
+      <header className="app-header">
+        <h1>Career Transition Assistant</h1>
+        <p>
+          Lim inn en CV og en konkret stillingsannonse, og få hjelp til å se
+          relevante styrker, kompetansegap, CV-forslag og et førsteutkast til
+          søknadsbrev. Ingenting lagres etter at økten er avsluttet.
+        </p>
+      </header>
 
-      <div className="ticks"></div>
+      <main>
+        <section aria-labelledby="mode-heading" className="mode-section">
+          <h2 id="mode-heading" className="visually-hidden">
+            Modusvalg
+          </h2>
+          <ModeSelector mode={mode} onModeChange={setMode} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          <button
+            type="button"
+            className="button-primary"
+            onClick={runDemoAnalysis}
+            disabled={status === 'loading'}
+          >
+            {status === 'loading' ? 'Analyserer …' : 'Kjør demoanalyse'}
+          </button>
+        </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+        {status === 'loading' && <StatusMessage kind="loading" />}
+
+        {status === 'error' && (
+          <StatusMessage
+            kind="error"
+            message={errorMessage}
+            onRetry={runDemoAnalysis}
+          />
+        )}
+
+        {status === 'idle' && (
+          <StatusMessage
+            kind="empty"
+            message="Velg demomodus og trykk «Kjør demoanalyse» for å se hovedflyten med fiktiv CV og stillingsannonse."
+          />
+        )}
+
+        {status === 'success' && result && (
+          <div className="results">
+            <InputPreview
+              cvText={response.cv_text}
+              jobAdText={response.job_ad_text}
+            />
+            <JobRequirementsList requirements={result.job_requirements} />
+            <TraceableItemList
+              heading="Relevante styrker"
+              headingId="strengths-heading"
+              items={result.strengths}
+              textKey="description"
+              emptyText="Ingen relevante styrker ble identifisert."
+              requirementsById={requirementsById}
+            />
+            <TraceableItemList
+              heading="Kompetansegap"
+              headingId="gaps-heading"
+              items={result.competency_gaps}
+              textKey="description"
+              emptyText="Ingen kompetansegap ble identifisert."
+              requirementsById={requirementsById}
+            />
+            <TraceableItemList
+              heading="Forslag til CV-tilpasning"
+              headingId="suggestions-heading"
+              items={result.cv_suggestions}
+              textKey="suggestion"
+              emptyText="Ingen CV-forslag ble generert."
+              requirementsById={requirementsById}
+            />
+            <ApplicationDraftEditor key={runId} draft={result.application_draft} />
+          </div>
+        )}
+      </main>
+
+      <footer className="app-footer">
+        <p>
+          Demomodus bruker en fast, fiktiv CV og stillingsannonse og gjør
+          ingen kall til en ekstern språkmodell.
+        </p>
+      </footer>
+    </div>
   )
 }
 

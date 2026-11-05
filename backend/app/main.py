@@ -1,9 +1,23 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from .demo_data import load_demo_response
 from .models import AnalyzeResponse
 
 app = FastAPI(title="Career Transition Assistant API")
+
+# Frontenden kjører som en separat utviklingsserver (Vite, typisk port 5173)
+# og må derfor få lov til å kalle backend-API-et over CORS i lokal utvikling
+# (architecture.md, avsnitt "Kommunikasjon" og "Local Development").
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
