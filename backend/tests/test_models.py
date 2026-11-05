@@ -10,7 +10,10 @@ import pytest
 from pydantic import ValidationError
 
 from app.models import (
+    MAX_CV_LENGTH,
+    MAX_JOB_AD_LENGTH,
     AnalysisResult,
+    AnalyzeRequest,
     AnalyzeResponse,
     CompetencyGap,
     CvSuggestion,
@@ -111,3 +114,42 @@ def test_competency_gap_and_cv_suggestion_default_related_ids_to_empty_list():
 
     assert gap.related_requirement_ids == []
     assert suggestion.related_requirement_ids == []
+
+
+def test_analyze_request_accepts_valid_input():
+    request = AnalyzeRequest(cv_text="En CV.", job_ad_text="En stillingsannonse.")
+
+    assert request.cv_text == "En CV."
+
+
+def test_analyze_request_rejects_blank_cv_text():
+    with pytest.raises(ValidationError):
+        AnalyzeRequest(cv_text="   ", job_ad_text="En stillingsannonse.")
+
+
+def test_analyze_request_rejects_blank_job_ad_text():
+    with pytest.raises(ValidationError):
+        AnalyzeRequest(cv_text="En CV.", job_ad_text="\n\t  ")
+
+
+def test_analyze_request_rejects_empty_cv_text():
+    with pytest.raises(ValidationError):
+        AnalyzeRequest(cv_text="", job_ad_text="En stillingsannonse.")
+
+
+def test_analyze_request_rejects_cv_text_over_max_length():
+    with pytest.raises(ValidationError):
+        AnalyzeRequest(cv_text="a" * (MAX_CV_LENGTH + 1), job_ad_text="En stillingsannonse.")
+
+
+def test_analyze_request_rejects_job_ad_text_over_max_length():
+    with pytest.raises(ValidationError):
+        AnalyzeRequest(cv_text="En CV.", job_ad_text="a" * (MAX_JOB_AD_LENGTH + 1))
+
+
+def test_analyze_request_accepts_input_at_max_length():
+    request = AnalyzeRequest(
+        cv_text="a" * MAX_CV_LENGTH, job_ad_text="a" * MAX_JOB_AD_LENGTH
+    )
+
+    assert len(request.cv_text) == MAX_CV_LENGTH

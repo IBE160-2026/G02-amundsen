@@ -292,3 +292,91 @@ Normalmodus med ekte KI-analyse er foreløpig ikke implementert. Den fungerende 
 5. Forbedre feilhåndtering og kvalitetssikre brukergrensesnittet.
 6. Vurdere publisering på Vercel.
 7. Ferdigstille README, prosessdokumentasjon og refleksjonsrapport.
+
+
+## 05.11.2026 – Implementering av normalmodus med OpenAI (ekte språkmodell)
+
+### Arbeid utført
+
+**Planlegging før implementering**
+- Ba Claude Code lese PRD, arkitektur, epics/stories, `CLAUDE.md` og eksisterende backend-kode, og legge fram en plan for normalmodus før noe kode ble endret.
+- Valgte OpenAI med modellen `gpt-5.4-mini` som språkmodell-leverandør.
+- Lot Claude Code verifisere, uten nettverkskall, at de eksisterende Pydantic-modellene fra demomodus (`AnalysisResult` m.fl.) allerede var kompatible med OpenAI sin strukturerte JSON-output («Structured Outputs») – ingen endring av selve skjemaet var nødvendig.
+- Godkjente planen før implementeringen startet.
+
+**Implementering av normalmodus (backend)**
+- La til `POST /api/analyze` i FastAPI, ved siden av det uendrede demo-endepunktet `GET /api/analyze/demo`.
+- Opprettet `config.py` (innstillinger fra `backend/.env`), `llm_client.py` (lager OpenAI-klienten først når den trengs, uten automatiske retries), `prompts.py` (systemprompt med strenge regler mot oppdiktet informasjon og krav om ordrette sitater) og `analysis_service.py` (orkestrerer kallet og egne feiltyper).
+- Opprettet `grounding.py`: en egen kontroll som sjekker at kildesitater i KI-svaret faktisk finnes ordrett i CV-en/stillingsannonsen, med normalisering av mellomrom og store/små bokstaver.
+- Satte rimelige grenser for inputlengde (CV og stillingsannonse), timeout (30 sekunder) og ingen automatiske retries ved API-feil.
+- Opprettet `backend/.env.example` og oppdaterte `architecture.md` med valg av modell og miljøvariabler (erstattet det tidligere, generiske `LLM_API_KEY`-eksempelet).
+- Skrev automatiserte tester som mocker OpenAI-klienten – ingen ekte eller betalte API-kall i testsuiten. Testantallet økte fra 20 til 66 gjennom denne fasen.
+- Frontend for normalmodus ble bevisst IKKE implementert i denne omgangen – backenden skulle kvalitetssikres med ekte kall først, slik faglærer/plan tilsa.
+
+**Tre ekte API-tester mot OpenAI**
+
+1. **Første ekte kall:** HTTP 200 OK. Søknadsutkastet inneholdt ingen oppdiktede kvalifikasjoner. Manuell kvalitetssikring avdekket tre feilkoblinger: en styrke om en bacheloroppgave ble koblet til et krav om Power BI som oppgaven ikke dokumenterte; et kompetansegap ble koblet til feil stillingskrav på samme måte; og et CV-forslag hadde et reelt, men irrelevant CV-sitat som kildehenvisning.
+2. **Andre ekte kall (etter fiks):** HTTP 200 OK. Power BI-feilene var borte. Men et korrekt SQL-kompetansegap forsvant helt, og en styrke om kundeservice/opplæring mistet en relevant krav-kobling. Årsaken ble undersøkt i koden (ikke gjettet): en nøkkelord-heuristikk som skulle hindre feilkoblinger krevde minst 4 bokstaver for at et ord skulle telle, og utelukket dermed det korte, men presise ordet «SQL» fra sammenligningen.
+3. **Tredje ekte kall (etter justering):** HTTP 200 OK. SQL og Power BI vises nå begge korrekt som manglende, udokumentert kompetanse. Ingen tydelig oppdiktede kvalifikasjoner ble funnet. De tidligere feilkoblingene til Power BI er borte. Noen relevante funn har fortsatt tomme `related_requirement_ids` – dette er en kjent, dokumentert begrensning som aksepteres i v1 (se under). Søknadsutkastet fungerer funksjonelt, men kan forbedres språklig senere.
+
+### Tekniske utfordringer og løsninger
+
+**1. Et sitat kan være ekte uten at koblingen er riktig**
+- Problem: Grunnlagskontrollen kontrollerte opprinnelig bare at kildesitater fantes ordrett i CV/annonse, ikke at koblingen (hvilket krav et funn ble knyttet til) faktisk var riktig.
+- Løsning: La til en enkel, deterministisk nøkkelord-overlapp-kontroll for å luke bort åpenbart feilaktige koblinger (f.eks. bacheloroppgave koblet til Power BI).
+- Læring: Et korrekt, ordrett sitat er ikke det samme som en korrekt tolkning eller kobling.
+
+**2. Den første fiksen var for streng (SQL-gapet forsvant)**
+- Problem: Den nye nøkkelord-kontrollen krevde minst 4 bokstaver for at et ord skulle telle som et treff, og utelukket dermed «SQL» (3 bokstaver) – et korrekt kompetansegap ble slettet helt, uavhengig av om språkmodellen faktisk leverte det riktig.
+- Undersøkelse: Årsaken ble bekreftet ved å kjøre koden direkte på representativ tekst, ikke ved å gjette. Det var derimot ikke mulig å fastslå med 100 % sikkerhet hva språkmodellen opprinnelig svarte i den konkrete sesjonen, siden selve rå-svaret aldri logges (for å unngå å lagre CV-/annonseinnhold).
+- Løsning: Senket minstelengden til 3 bokstaver, la til flere korte, grammatiske fyllord i unntakslisten, og – viktigst – gjorde nøkkelord-kontrollen IKKE lenger avgjørende for om et obligatorisk kildesitat beholdes. Kun selve, ordrette sitatkontrollen avgjør nå dette; nøkkelord-heuristikken brukes bare der kostnaden ved en feilvurdering er lav (krav-koblinger, og et valgfritt CV-sitat).
+- La også til logging av antall funn før/etter grunnlagskontrollen (kun antall, aldri innhold), slik at et lignende spørsmål kan besvares direkte neste gang.
+- Læring: En sikkerhetsmekanisme kan selv bli en feilkilde. Det er ikke tilstrekkelig å teste at en fiks løser det rapporterte problemet – den må også testes mot at den ikke skaper nye, utilsiktede problemer.
+
+**3. En gjenværende, bevisst akseptert begrensning**
+- En ren nøkkelord-heuristikk kan ikke skille perfekt mellom en «åpenbart feilaktig» kobling og en «reelt relatert, men annerledes formulert» kobling (f.eks. kundeservice/opplæring vs. kommunikasjonsevner) – begge mangler delt ordforråd.
+- Besluttet å IKKE bygge en mer komplisert løsning (f.eks. en synonymordbok eller semantisk sammenligning) for å løse dette, i tråd med ønsket om et enkelt og forståelig regelverk i v1.
+- Dette er dokumentert i koden og dekket av en egen automatisert test, slik at det er en kjent, synlig begrensning – ikke en skjult feil.
+
+**4. Ekte API-nøkkel i lokal `.env`**
+- Satte opp en ekte OpenAI API-nøkkel lokalt i `backend/.env` for å kunne kjøre de tre ekte testene.
+- Kontrollerte flere ganger i løpet av arbeidet at `backend/.env` er dekket av `.gitignore`, ikke er spores av Git, og at nøkkelen aldri ble gjengitt i kode, tester eller logger.
+
+### Testing og kvalitetssikring
+
+**Automatisert testing**
+- Backend: alle 66 av 66 tester bestått (opp fra 20 etter forrige fase), inkludert nye, målrettede tester for grunnlagskontrollen, SQL-regresjonen, den aksepterte begrensningen og den nye loggingen.
+- Ingen av de automatiserte testene gjør ekte eller betalte API-kall – OpenAI-klienten mockes gjennomgående.
+- Demomodus er verifisert uendret og fortsatt fungerende gjennom hele denne fasen.
+
+**Manuell kvalitetssikring av ekte KI-svar**
+- Tre ekte kall mot OpenAI, med manuell gjennomgang av stillingskrav, styrker, kompetansegap, CV-forslag, kildehenvisninger og søknadsutkast for hvert svar (se over).
+- Kontrollerte spesifikt at ingen oppdiktede kvalifikasjoner ble presentert som fakta – et kjernekrav i PRD (FR10).
+
+### KI-bruk og kritisk vurdering
+
+- Claude Code ble brukt til å planlegge, implementere og rette normalmodus-integrasjonen, samt til å skrive og kjøre automatiserte tester.
+- Claude Code ble bedt om å undersøke årsaken til SQL-feilen i koden i stedet for å gjette, og rapporterte selv tydelig hvor sikker/usikker konklusjonen var (bekreftet i koden, men ikke bekreftet for den ene, historiske KI-forespørselen, siden rå-svar ikke logges).
+- KI-genererte forslag til fiks ble ikke akseptert blindt: den første fiksen (nøkkelord-kontroll på alle kildesitater) viste seg å være for streng ved reell testing, og ble korrigert i en egen runde etter at feilen ble rapportert.
+- Det ble en eksplisitt beslutning å IKKE la KI-en bygge et mer komplisert regelverk (f.eks. synonymer/semantikk) for å jage den siste begrensningen, men heller akseptere og dokumentere den – en avveining tatt av studenten, ikke overlatt til KI-en.
+- Claude Code ble instruert om ikke å gjøre ekte, betalte API-kall selv, og ikke å opprette en reell API-nøkkel – dette ble gjort manuelt av studenten.
+- Claude Code ble instruert om ikke å committe eller pushe kodeendringer i denne fasen; endringene er kontrollert med `git status`/`git diff` og committes separat av studenten.
+
+### Git og versjonskontroll
+
+- `git status` viser 8 endrede, sporede filer (`README.md`, `architecture.md`, `backend/README.md`, `backend/app/main.py`, `backend/app/models.py`, `backend/pyproject.toml`, `backend/tests/test_models.py`, `backend/uv.lock`) og 10 nye, usporede filer (`backend/.env.example`, `backend/app/{analysis_service,config,grounding,llm_client,prompts}.py`, `backend/tests/{test_analysis_service,test_analyze_endpoint,test_grounding,test_llm_client}.py`).
+- Bekreftet med `git check-ignore -v backend/.env` og `git ls-files backend/.env` at den ekte `.env`-filen med API-nøkkelen ikke er, og aldri har vært, spores av Git.
+- Ingen av disse endringene er committet eller pushet ennå – dette gjøres av studenten i en egen commit etter denne gjennomgangen.
+
+### Status ved avslutning av denne utviklingsfasen
+
+Backend for Career Transition Assistant har nå en fungerende normalmodus som kommuniserer med OpenAI (`gpt-5.4-mini`), validert mot tre ekte API-kall. Demomodus er uendret og fortsatt fungerende. Frontend har ikke støtte for normalmodus ennå – normalmodus kan foreløpig bare testes direkte mot backend-API-et (curl eller `/docs`).
+
+### Neste steg
+
+1. Koble frontend til `POST /api/analyze` og legge til et skjema for innliming av CV og stillingsannonse (aktivere normalmodus i grensesnittet).
+2. Forbedre den språklige kvaliteten på søknadsutkastet.
+3. Vurdere om den dokumenterte begrensningen rundt krav-koblinger (`related_requirement_ids`) bør forbedres senere, f.eks. med en enkel kategoriliste.
+4. Teste løsningen mot flere fiktive/ekte testsett for å bygge videre erfaring med KI-kvaliteten.
+5. Vurdere publisering på Vercel.
+6. Ferdigstille README, prosessdokumentasjon og refleksjonsrapport.

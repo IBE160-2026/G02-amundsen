@@ -9,10 +9,17 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 Priority = Literal["sentral", "ønskelig"]
 """Hvor viktig et krav i stillingsannonsen er for analysen (FR3, Story 2.3)."""
+
+# Rimelige øvre grenser for inputlengde til normalmodus (presisering i
+# oppgaven: "Legg inn rimelige grenser for inputlengde"). Grensene er satt
+# romslig nok til en reell CV/stillingsannonse, men bounder likevel
+# token-kostnad og unngår urimelig store forespørsler til språkmodellen.
+MAX_CV_LENGTH = 20_000
+MAX_JOB_AD_LENGTH = 10_000
 
 
 class SourceReference(BaseModel):
@@ -87,6 +94,26 @@ class AnalysisResult(BaseModel):
     application_draft: str = Field(
         description="Førsteutkast til søknadsbrev basert på CV og stillingsannonse (FR8)."
     )
+
+
+class AnalyzeRequest(BaseModel):
+    """Forespørsel til normalmodus (FR1, FR2): brukerens CV og den aktuelle
+    stillingsannonsen som ren tekst.
+
+    Lengdegrensene er en enkel beskyttelse mot urimelig store forespørsler
+    til språkmodellen (kostnad/token-bruk), ikke en antagelse om at ekte
+    CV-er eller stillingsannonser normalt er så lange.
+    """
+
+    cv_text: str = Field(min_length=1, max_length=MAX_CV_LENGTH)
+    job_ad_text: str = Field(min_length=1, max_length=MAX_JOB_AD_LENGTH)
+
+    @field_validator("cv_text", "job_ad_text")
+    @classmethod
+    def _not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Feltet kan ikke være tomt eller bare bestå av mellomrom.")
+        return value
 
 
 class AnalyzeResponse(BaseModel):

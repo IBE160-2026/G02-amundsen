@@ -77,13 +77,17 @@ Frontenden skal ikke kommunisere direkte med språkmodell-API-et. API-nøkkelen 
 ### Model Provider
 Applikasjonen skal bruke én ekstern språkmodell gjennom et API i normal modus.
 
-Endelig leverandør og modell velges før implementering, basert på:
-- kostnad
-- kvalitet på strukturerte svar
-- dokumentasjon
-- enkel integrasjon med Python
-- hvor godt modellen kan følge krav om å ikke finne på kvalifikasjoner
-- mulighet for stabil testing
+Valgt leverandør og modell: **OpenAI**, modellen **gpt-5.4-mini**, via den offisielle
+Python-SDK-en (`openai`). Modellnavnet er konfigurerbart via miljøvariabelen
+`OPENAI_MODEL` (se avsnitt 6), slik at det kan endres uten kodeendring.
+
+Valget er basert på:
+- kostnad (mini-variant av modellen)
+- støtte for strukturert JSON-output direkte fra Pydantic-modeller («Structured
+  Outputs»), som lar backenden gjenbruke `AnalysisResult` uendret som skjema
+- god, offisiell dokumentasjon og en enkel, godt støttet Python-SDK
+- mulighet for stabil testing: SDK-et har tydelige, dokumenterte feilklasser som kan
+  mockes i automatiserte tester uten ekte, betalte API-kall
 
 ### Backend Integration
 All kommunikasjon med språkmodellen skal skje fra backenden.
@@ -212,13 +216,19 @@ uv run uvicorn app.main:app --reload
 
 ### Environment Variables
 
-Hemmeligheter og konfigurasjon som ikke skal ligge i GitHub lagres i en lokal `.env`-fil.
+Hemmeligheter og konfigurasjon som ikke skal ligge i GitHub lagres i en lokal `.env`-fil
+i `backend/` (siden `uv run` kjøres med `backend/` som arbeidsmappe).
 
-Repoet skal inneholde en `.env.example`-fil som viser hvilke miljøvariabler som kreves, uten ekte hemmeligheter.
+Repoet skal inneholde en `backend/.env.example`-fil som viser hvilke miljøvariabler som
+kreves, uten ekte hemmeligheter.
 
-Eksempel:
+Eksempel (`backend/.env.example`):
 
-LLM_API_KEY=
+```
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-5.4-mini
+OPENAI_TIMEOUT_SECONDS=30
+```
 
 ### Configuration Principles
 
