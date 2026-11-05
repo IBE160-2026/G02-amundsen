@@ -110,3 +110,23 @@ Ingen git-commit/push er gjort (på brukerens eksplisitte instruks) – kun denn
 - Den dokumenterte begrensningen (kundeservice/opplæring → kommunikasjonsevner forblir ukoblet) er IKKE løst, kun bevisst akseptert og testet som kjent oppførsel – hvis gruppen senere vil forbedre dette, er neste skritt utenfor denne øktens scope (f.eks. en liten synonym-/kategoriliste, eller en enkel LLM-basert "er denne koblingen rimelig?"-verifisering).
 - Brukeren bør kjøre et nytt ekte kall for å bekrefte at SQL-gapet nå vises, og se i backend-loggen (`_log_grounding_effect`) om grunnlagskontrollen fjerner noe uventet.
 - Øvrige åpne punkter er uendret, se `issues.md`.
+
+## 2026-11-05 kl. 14:59 — Sondre Tveit Amundsen
+
+### Oppgave
+Tredje ekte API-test gjennomført: HTTP 200 OK, SQL og Power BI vises nå korrekt som manglende, udokumentert kompetanse, ingen tydelig oppdiktede kvalifikasjoner, Power BI-feilkoblingene er borte. Noen relevante funn har fortsatt tomme `related_requirement_ids` – dette aksepteres som en dokumentert v1-begrensning. Oppgaven var å avslutte denne fasen: oppdatere `process-log.md` med hele normalmodus-utviklingen og de tre ekte testene, kontrollere `git status`/`git diff`, bekrefte at `backend/.env` ikke spores, kjøre backend-testene én siste gang, og oppsummere hvilke filer som skal committes – uten selv å committe, pushe eller gjøre flere ekte API-kall.
+
+### Plan
+- Kjørte `git status`, `git status` (lesbar), `git diff --stat`/`--numstat` og bekreftet `backend/.env` sin gitignore-status med `git check-ignore -v` og `git ls-files` (tom liste = ikke spores).
+- Kjørte `uv run pytest -v` en siste gang for å bekrefte full, grønn teststatus før oppsummering.
+- Skrev en ny, omfattende datert seksjon i `process-log.md` («05.11.2026 – Implementering av normalmodus med OpenAI») som dekker planleggingsfasen, implementeringen, alle tre ekte API-tester (med funn), de to tekniske utfordringene (feilkoblinger, og den for strenge SQL-fiksen) med årsak/løsning/læring, den aksepterte begrensningen, KI-bruk/kritisk vurdering, og neste steg – i samme stil og detaljnivå som de to eksisterende seksjonene i loggen.
+
+### Resultat
+- `process-log.md` (endret) – ny seksjon lagt til, ingen eksisterende innhold fjernet eller omskrevet.
+- `git status`: 8 endrede, sporede filer (`README.md`, `architecture.md`, `backend/README.md`, `backend/app/main.py`, `backend/app/models.py`, `backend/pyproject.toml`, `backend/tests/test_models.py`, `backend/uv.lock`, pluss nå `process-log.md` = 9) og 10 nye, usporede filer (`backend/.env.example`, `backend/app/{analysis_service,config,grounding,llm_client,prompts}.py`, `backend/tests/{test_analysis_service,test_analyze_endpoint,test_grounding,test_llm_client}.py`).
+- `backend/.env` er bekreftet IKKE spores av Git (`git check-ignore -v` → matcher `.gitignore:42:.env`; `git ls-files backend/.env` → tom; `git status --porcelain -- backend/.env` → tom).
+- Testresultat: `uv run pytest -v` → **66 passed, 0 failed**.
+- Ingen ekte OpenAI-kall ble gjort i denne avsluttende gjennomgangen. Ingen git-commit/push av kodeendringene er gjort (på brukerens eksplisitte instruks) – kun denne loggfilen committes av `sesjonslogg`-skillen.
+
+### Åpne punkter
+Ingen nye. Øvrige åpne punkter er uendret, se `issues.md`.
