@@ -1,6 +1,7 @@
-// Modusvalg (Story 1.3, FR12): i v1 er kun demomodus implementert.
-// Normalmodus vises, men er tydelig merket som ikke implementert ennå,
-// slik at brukeren forstår hvorfor den ikke kan velges.
+// Modusvalg (Story 1.3, FR12). Demomodus bruker en fast, fiktiv CV og
+// stillingsannonse og krever ingen API-nøkkel. Normalmodus sender brukerens
+// egen CV og stillingsannonse til backenden, som videresender til en ekte
+// språkmodell – og krever derfor at backenden har en konfigurert API-nøkkel.
 
 function ModeSelector({ mode, onModeChange }) {
   return (
@@ -24,11 +25,20 @@ function ModeSelector({ mode, onModeChange }) {
         </span>
       </label>
 
-      <label className="mode-option is-disabled" aria-disabled="true">
-        <input type="radio" name="mode" value="normal" disabled />
+      <label className={`mode-option ${mode === 'normal' ? 'is-selected' : ''}`}>
+        <input
+          type="radio"
+          name="mode"
+          value="normal"
+          checked={mode === 'normal'}
+          onChange={() => onModeChange('normal')}
+        />
         <span>
           <strong>Normalmodus</strong>
-          <small>Ikke implementert ennå – kommer i en senere versjon.</small>
+          <small>
+            Lim inn din egen CV og stillingsannonse. Krever at backenden har
+            en konfigurert API-nøkkel.
+          </small>
         </span>
       </label>
     </fieldset>

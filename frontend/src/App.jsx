@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
-import { fetchDemoAnalysis } from './api/analyzeApi'
+import { fetchDemoAnalysis, fetchNormalAnalysis } from './api/analyzeApi'
 import ApplicationDraftEditor from './components/ApplicationDraftEditor'
 import InputPreview from './components/InputPreview'
 import JobRequirementsList from './components/JobRequirementsList'
 import ModeSelector from './components/ModeSelector'
+import NormalModeForm from './components/NormalModeForm'
 import StatusMessage from './components/StatusMessage'
 import TraceableItemList from './components/TraceableItemList'
 
@@ -14,13 +15,26 @@ function App() {
   const [response, setResponse] = useState(null)
   const [errorMessage, setErrorMessage] = useState(null)
   const [runId, setRunId] = useState(0)
+  // Hva det pågående/siste kallet faktisk var – slik at useEffect under vet
+  // hvilken API-funksjon den skal kalle, og "Prøv igjen" kan gjenta nøyaktig
+  // samme forespørsel uten at brukeren må lime inn teksten på nytt.
+  const [pendingRequest, setPendingRequest] = useState(null)
 
   useEffect(() => {
-    if (status !== 'loading') return
+    if (status !== 'loading' || !pendingRequest) return
 
     const controller = new AbortController()
 
-    fetchDemoAnalysis({ signal: controller.signal })
+    const promise =
+      pendingRequest.kind === 'demo'
+        ? fetchDemoAnalysis({ signal: controller.signal })
+        : fetchNormalAnalysis({
+            cvText: pendingRequest.cvText,
+            jobAdText: pendingRequest.jobAdText,
+            signal: controller.signal,
+          })
+
+    promise
       .then((data) => {
         setResponse(data)
         setRunId((id) => id + 1)
@@ -35,14 +49,34 @@ function App() {
       })
 
     return () => controller.abort()
-  }, [status])
+  }, [status, pendingRequest])
 
   const requirementsById = useMemo(() => {
     const requirements = response?.result?.job_requirements ?? []
     return Object.fromEntries(requirements.map((req) => [req.id, req]))
   }, [response])
 
+  function handleModeChange(newMode) {
+    setMode(newMode)
+    setStatus('idle')
+    setResponse(null)
+    setErrorMessage(null)
+    setPendingRequest(null)
+  }
+
   function runDemoAnalysis() {
+    setErrorMessage(null)
+    setPendingRequest({ kind: 'demo' })
+    setStatus('loading')
+  }
+
+  function runNormalAnalysis({ cvText, jobAdText }) {
+    setErrorMessage(null)
+    setPendingRequest({ kind: 'normal', cvText, jobAdText })
+    setStatus('loading')
+  }
+
+  function retry() {
     setErrorMessage(null)
     setStatus('loading')
   }
@@ -65,29 +99,34 @@ function App() {
           <h2 id="mode-heading" className="visually-hidden">
             Modusvalg
           </h2>
-          <ModeSelector mode={mode} onModeChange={setMode} />
+          <ModeSelector mode={mode} onModeChange={handleModeChange} />
 
-          <button
-            type="button"
-            className="button-primary"
-            onClick={runDemoAnalysis}
-            disabled={status === 'loading'}
-          >
-            {status === 'loading' ? 'Analyserer …' : 'Kjør demoanalyse'}
-          </button>
+          {mode === 'demo' && (
+            <button
+              type="button"
+              className="button-primary"
+              onClick={runDemoAnalysis}
+              disabled={status === 'loading'}
+            >
+              {status === 'loading' ? 'Analyserer …' : 'Kjør demoanalyse'}
+            </button>
+          )}
+
+          {mode === 'normal' && (
+            <NormalModeForm
+              onSubmit={runNormalAnalysis}
+              disabled={status === 'loading'}
+            />
+          )}
         </section>
 
         {status === 'loading' && <StatusMessage kind="loading" />}
 
         {status === 'error' && (
-          <StatusMessage
-            kind="error"
-            message={errorMessage}
-            onRetry={runDemoAnalysis}
-          />
+          <StatusMessage kind="error" message={errorMessage} onRetry={retry} />
         )}
 
-        {status === 'idle' && (
+        {status === 'idle' && mode === 'demo' && (
           <StatusMessage
             kind="empty"
             message="Velg demomodus og trykk «Kjør demoanalyse» for å se hovedflyten med fiktiv CV og stillingsannonse."
@@ -132,8 +171,9 @@ function App() {
 
       <footer className="app-footer">
         <p>
-          Demomodus bruker en fast, fiktiv CV og stillingsannonse og gjør
-          ingen kall til en ekstern språkmodell.
+          {mode === 'demo'
+            ? 'Demomodus bruker en fast, fiktiv CV og stillingsannonse og gjør ingen kall til en ekstern språkmodell.'
+            : 'Normalmodus sender CV-en og stillingsannonsen din via backenden til en ekstern språkmodell (OpenAI) for analyse. Ingenting lagres etter at økten er avsluttet.'}
         </p>
       </footer>
     </div>

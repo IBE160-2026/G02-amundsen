@@ -13,14 +13,21 @@ from .models import AnalyzeRequest, AnalyzeResponse
 
 app = FastAPI(title="Career Transition Assistant API")
 
-# Frontenden kjører som en separat utviklingsserver (Vite, typisk port 5173)
-# og må derfor få lov til å kalle backend-API-et over CORS i lokal utvikling
-# (architecture.md, avsnitt "Kommunikasjon" og "Local Development").
+# Frontenden kjører som en separat utviklingsserver (Vite). Standardporten
+# er 5173, men Vite velger automatisk 5174 (eller høyere) hvis 5173 allerede
+# er i bruk (f.eks. en annen kjørende dev-server) – begge porter må derfor
+# tillates for at lokal utvikling skal fungere uavhengig av hvilken port
+# Vite faktisk endte opp med (architecture.md, avsnitt "Kommunikasjon" og
+# "Local Development"). Listen er bevisst eksplisitt og begrenset til disse
+# lokale origins – CORS skal IKKE åpnes for alle domener (`allow_origins`
+# skal aldri settes til `["*"]`).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
     ],
     allow_methods=["GET", "POST"],
     allow_headers=["*"],

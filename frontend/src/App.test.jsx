@@ -2,11 +2,11 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
-import { AnalyzeApiError, fetchDemoAnalysis } from './api/analyzeApi'
+import { AnalyzeApiError, fetchDemoAnalysis, fetchNormalAnalysis } from './api/analyzeApi'
 
 vi.mock('./api/analyzeApi', async () => {
   const actual = await vi.importActual('./api/analyzeApi')
-  return { ...actual, fetchDemoAnalysis: vi.fn() }
+  return { ...actual, fetchDemoAnalysis: vi.fn(), fetchNormalAnalysis: vi.fn() }
 })
 
 const demoResponse = {
@@ -46,18 +46,22 @@ const demoResponse = {
   },
 }
 
+const normalResponse = {
+  ...demoResponse,
+  mode: 'normal',
+  cv_text: 'Min egen CV-tekst',
+  job_ad_text: 'Min egen stillingsannonse',
+}
+
+async function selectNormalMode(user) {
+  await user.click(screen.getByRole('radio', { name: /normalmodus/i }))
+}
+
 afterEach(() => {
   vi.resetAllMocks()
 })
 
 describe('App – demomodus', () => {
-  it('viser normalmodus som ikke implementert', () => {
-    render(<App />)
-
-    const normalRadio = screen.getByRole('radio', { name: /normalmodus/i })
-    expect(normalRadio).toBeDisabled()
-  })
-
   it('viser en tom-tilstand før analysen er kjørt', () => {
     render(<App />)
 
@@ -117,5 +121,130 @@ describe('App – demomodus', () => {
     expect(
       screen.getByRole('button', { name: /prøv igjen/i }),
     ).toBeInTheDocument()
+  })
+})
+
+describe('App – normalmodus', () => {
+  it('kan velges, og viser et skjema for CV og stillingsannonse i stedet for demo-knappen', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const normalRadio = screen.getByRole('radio', { name: /normalmodus/i })
+    expect(normalRadio).not.toBeDisabled()
+
+    await selectNormalMode(user)
+
+    expect(normalRadio).toBeChecked()
+    expect(screen.getByLabelText('CV')).toBeInTheDocument()
+    expect(screen.getByLabelText('Stillingsannonse')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /kjør analyse/i })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /kjør demoanalyse/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('viser en valideringsfeil og kaller ikke API-et når feltene er tomme', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await selectNormalMode(user)
+
+    await user.click(screen.getByRole('button', { name: /kjør analyse/i }))
+
+    expect(
+      await screen.findByText(/fyll inn både cv og stillingsannonse/i),
+    ).toBeInTheDocument()
+    expect(fetchNormalAnalysis).not.toHaveBeenCalled()
+  })
+
+  it('viser en lastemelding mens normalmodus-analysen pågår', async () => {
+    let resolveFetch
+    fetchNormalAnalysis.mockImplementationOnce(
+      () => new Promise((resolve) => { resolveFetch = resolve }),
+    )
+    const user = userEvent.setup()
+    render(<App />)
+    await selectNormalMode(user)
+
+    await user.type(screen.getByLabelText('CV'), 'Min egen CV-tekst')
+    await user.type(screen.getByLabelText('Stillingsannonse'), 'Min egen stillingsannonse')
+    await user.click(screen.getByRole('button', { name: /kjør analyse/i }))
+
+    expect(screen.getByRole('status')).toHaveTextContent(/analyserer/i)
+
+    resolveFetch(normalResponse)
+    await waitFor(() => {
+      expect(screen.getByText('Relevant mastergrad')).toBeInTheDocument()
+    })
+  })
+
+  it('sender inn CV og stillingsannonse og viser resultatet ved suksess', async () => {
+    fetchNormalAnalysis.mockResolvedValueOnce(normalResponse)
+    const user = userEvent.setup()
+    render(<App />)
+    await selectNormalMode(user)
+
+    await user.type(screen.getByLabelText('CV'), 'Min egen CV-tekst')
+    await user.type(screen.getByLabelText('Stillingsannonse'), 'Min egen stillingsannonse')
+    await user.click(screen.getByRole('button', { name: /kjør analyse/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Relevant mastergrad')).toBeInTheDocument()
+    })
+
+    expect(fetchNormalAnalysis).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cvText: 'Min egen CV-tekst',
+        jobAdText: 'Min egen stillingsannonse',
+      }),
+    )
+    // Vises både i det ekkoede input-preview-feltet og i skjemaet selv.
+    expect(screen.getAllByText('Min egen CV-tekst')).toHaveLength(2)
+  })
+
+  it('viser en forståelig feilmelding ved API-feil, og kan prøves igjen uten å tømme skjemaet', async () => {
+    fetchNormalAnalysis
+      .mockRejectedValueOnce(
+        new AnalyzeApiError(
+          'Normalmodus er ikke tilgjengelig: ingen gyldig API-nøkkel er konfigurert på serveren.',
+        ),
+      )
+      .mockResolvedValueOnce(normalResponse)
+    const user = userEvent.setup()
+    render(<App />)
+    await selectNormalMode(user)
+
+    await user.type(screen.getByLabelText('CV'), 'Min egen CV-tekst')
+    await user.type(screen.getByLabelText('Stillingsannonse'), 'Min egen stillingsannonse')
+    await user.click(screen.getByRole('button', { name: /kjør analyse/i }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/ingen gyldig api-nøkkel/i)
+    })
+
+    // Teksten skal fortsatt stå i feltene etter en mislykket forespørsel.
+    expect(screen.getByLabelText('CV')).toHaveValue('Min egen CV-tekst')
+
+    await user.click(screen.getByRole('button', { name: /prøv igjen/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Relevant mastergrad')).toBeInTheDocument()
+    })
+    expect(fetchNormalAnalysis).toHaveBeenCalledTimes(2)
+  })
+
+  it('nullstiller forrige resultat når brukeren bytter modus', async () => {
+    fetchDemoAnalysis.mockResolvedValueOnce(demoResponse)
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /kjør demoanalyse/i }))
+    await waitFor(() => {
+      expect(screen.getByText('Relevant mastergrad')).toBeInTheDocument()
+    })
+
+    await selectNormalMode(user)
+
+    expect(screen.queryByText('Relevant mastergrad')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /kjør analyse/i })).toBeInTheDocument()
   })
 })

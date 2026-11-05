@@ -380,3 +380,79 @@ Backend for Career Transition Assistant har nå en fungerende normalmodus som ko
 4. Teste løsningen mot flere fiktive/ekte testsett for å bygge videre erfaring med KI-kvaliteten.
 5. Vurdere publisering på Vercel.
 6. Ferdigstille README, prosessdokumentasjon og refleksjonsrapport.
+
+
+## 05.11.2026 – CORS-feil under manuell testing av normalmodus
+
+### Arbeid utført
+
+- Testet normalmodus manuelt i nettleseren med backend på `http://127.0.0.1:8001` og frontend på `http://localhost:5174`.
+- Fikk følgende feil i nettleserkonsollen når frontend kalte `GET /api/analyze/demo`:
+  `Access to fetch at 'http://127.0.0.1:8001/api/analyze/demo' from origin 'http://localhost:5174' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present.`
+- Bemerket at samme endepunkt fungerte fint når det ble åpnet direkte i nettleserens adressefelt – feilen gjaldt altså kun skript-initierte `fetch()`-kall fra frontend, ikke vanlig navigasjon.
+
+### Undersøkelse, årsak og løsning
+
+- Kontrollerte eksisterende CORS-konfigurasjon i `backend/app/main.py`: `allow_origins` tillot kun `http://localhost:5173` og `http://127.0.0.1:5173`.
+- Årsak: Vite velger automatisk en annen port (5174, osv.) hvis standardporten 5173 allerede er i bruk – det var nettopp det som skjedde under denne testen. Backendens CORS-liste var ikke oppdatert til å dekke denne alternative porten, så nettleseren blokkerte responsen selv om selve API-kallet fungerte på serversiden.
+- Bekreftet årsaken ved å undersøke Starlette sin faktiske oppførsel: et `GET`-kall fra et ikke-tillatt origin besvares fortsatt med HTTP 200 av backenden, men UTEN `Access-Control-Allow-Origin`-headeren – det er dette som gjør at nettleseren avviser svaret på klientsiden.
+- Løsning: La til `http://localhost:5174` og `http://127.0.0.1:5174` i `allow_origins`, i tillegg til de eksisterende oppføringene for port 5173. CORS ble bevisst IKKE åpnet for alle domener (`allow_origins=["*"]`) – listen er fortsatt en eksplisitt, begrenset liste over lokale utviklingsadresser.
+- La til 11 nye automatiserte tester (`backend/tests/test_cors.py`) som bekrefter at alle fire tillatte origins (localhost/127.0.0.1 på port 5173 og 5174) faktisk får CORS-tillatelse på både vanlige kall og CORS-preflight, at et ukjent origin (f.eks. `http://evil.example.com`) ikke får det, og at konfigurasjonen fortsatt er en konkret liste og ikke et jokertegn.
+
+### Testing og kvalitetssikring
+
+- Backend: alle 77 av 77 tester bestått (opp fra 66), inkludert de 11 nye CORS-testene.
+- Ingen ekte, betalte OpenAI-kall ble gjort under denne feilsøkingen.
+
+### KI-bruk og kritisk vurdering
+
+- Claude Code ble bedt om å undersøke den eksisterende CORS-konfigurasjonen og den faktiske årsaken (Vite sin automatiske portvalg) før noe ble endret, i stedet for å anta at feilen lå et annet sted (f.eks. i backendens adresse eller port).
+- Endringen ble gjort minimal og målrettet: kun CORS-listen ble utvidet med de to nye origin-oppføringene som faktisk var nødvendige, ingen andre deler av konfigurasjonen ble rørt.
+- Claude Code ble instruert om ikke å committe eller pushe denne fiksen selv; endringen kontrolleres og committes separat.
+
+### Status
+
+CORS-feilen er rettet og dekket av automatiserte tester. Normalmodus og demomodus kan nå nås fra frontend uavhengig av om Vite kjører på port 5173 eller 5174.
+
+
+## 05.11.2026 – Vellykket manuell ende-til-ende-test i nettleseren
+
+### Arbeid utført
+
+Gjennomførte en fullstendig manuell ende-til-ende-test av Career Transition Assistant i nettleseren, med frontend på `http://localhost:5174` og backend på `http://127.0.0.1:8001`, etter at CORS-feilen samme dag var rettet.
+
+**Testflyt (normalmodus, ekte OpenAI API-kall)**
+- Bekreftet først at demomodus fungerte som forventet etter CORS-fiksen.
+- Byttet til normalmodus og limte inn en fiktiv CV og stillingsannonse.
+- Kjørte analysen mot den ekte språkmodellen (`gpt-5.4-mini`) via `POST /api/analyze`.
+
+**Resultater**
+- Analysen identifiserte relevante styrker, hver med kildehenvisning til CV-en og/eller stillingsannonsen.
+- SQL og Power BI ble korrekt identifisert som manglende, udokumentert kompetanse (kompetansegap) – i tråd med fiksene fra de tre foregående ekte testene samme dag.
+- CV-forslagene var relevante for stillingen.
+- Søknadsutkastet var basert på faktisk innhold i CV-en, uten oppdiktede kvalifikasjoner.
+
+### Kritisk vurdering
+
+- Dette bekrefter at hele kjeden – frontend → CORS → backend → OpenAI → grunnlagskontroll → visning i grensesnittet – fungerer sammen i praksis, ikke bare i automatiserte tester med mockede kall.
+- De tidligere oppdagede feilene (feilkoblede krav, et SQL-gap som forsvant) er ikke gjenoppstått: SQL og Power BI vises nå korrekt som kompetansegap, og CV-forslagene fremstår som relevante.
+- En gjenværende, mindre begrensning: søknadsutkastet er noe generelt formulert. Dette påvirker ikke kravet om at applikasjonen ikke skal finne på kvalifikasjoner (FR10) – utkastet er fortsatt faktabasert – men det er et forbedringspunkt for hvor nyttig/personlig utkastet oppleves av brukeren.
+- Denne testen dekker én fiktiv CV/stillingsannonse-kombinasjon. Den sier derfor noe om at løsningen fungerer, men ikke at den fungerer like godt for alle typer CV-er og stillinger – det krever testing mot flere, varierte testsett (se "Neste steg" i tidligere seksjoner).
+
+### Testing og kvalitetssikring
+
+- Manuell ende-til-ende-test i nettleser, med ekte OpenAI API-kall (det fjerde ekte kallet denne dagen, etter de tre foregående rapportert i seksjonen "Implementering av normalmodus med OpenAI").
+- Ingen ytterligere automatiserte tester ble kjørt eller endret i denne gjennomgangen – kun dokumentasjon av resultatet av den manuelle testen.
+
+### KI-bruk og kritisk vurdering
+
+- Claude Code ble brukt kun til å dokumentere testresultatet og den kritiske vurderingen i denne loggen – ingen kode ble endret, og ingen nye API-kall ble gjennomført av Claude Code selv.
+
+### Status ved avslutning av denne testrunden
+
+Career Transition Assistant fungerer nå ende-til-ende i nettleseren for begge moduser, verifisert med et ekte OpenAI-kall. Gjenværende kjente begrensninger:
+
+1. Søknadsutkastet kan oppleves som noe generelt – språklig/stilistisk forbedring er et mulig forbedringspunkt, ikke en korrekthetsfeil.
+2. Den tidligere dokumenterte begrensningen i krav-koblinger (`related_requirement_ids` kan gå glipp av en reelt relevant, men annerledes formulert kobling) står fortsatt, akseptert som en v1-begrensning.
+3. Testingen er så langt gjort med ett testsett (en fiktiv CV og stillingsannonse) – bredere testing mot flere, varierte CV-er/stillinger er ikke gjort.
+4. Ingen automatisert test kan verifisere en ekte, levende OpenAI-respons – kvaliteten på KI-genererte resultater må fortsatt vurderes manuelt, slik PRD-en (avsnitt 7) forutsetter.
