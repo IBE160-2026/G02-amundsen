@@ -77,3 +77,36 @@ Ingen git-commit/push er gjort (på brukerens eksplisitte instruks) – kun denn
 - Den nye nøkkelord-relevans-heuristikken er en tilnærming, ikke semantisk forståelse: den kan i prinsippet avvise en riktig kobling formulert med helt andre ord, eller slippe gjennom en feilkobling som tilfeldigvis deler et vanlig ord – dokumentert som en kjent begrensning i `grounding.py`.
 - Den konkrete, ekte OpenAI-analysen som avdekket de tre feilene er ikke lagret/retestet mot den nye koden (bruker har ikke gjenkjørt det samme virkelige kallet) – neste reelle test bør kontrollere at de samme tre feilkoblingene faktisk forsvinner i praksis, ikke bare i de syntetiske testene.
 - Øvrige åpne punkter er uendret, se over og `issues.md`.
+
+## 2026-11-05 kl. 14:50 — Sondre Tveit Amundsen
+
+### Oppgave
+Brukeren gjennomførte et nytt ekte `POST /api/analyze`-kall etter forrige fiks: Power BI-feilene var borte, men manuell kvalitetssikring fant to NYE problemer: (1) et korrekt SQL-kompetansegap (SQL er fortsatt et sentralt, udokumentert krav) forsvant helt, og (2) styrke S4 (kundeservice/opplæring av nyansatte) fikk `related_requirement_ids=[]` selv om den kan være relevant for et krav om kommunikasjonsevner. Brukeren konkluderte at forrige nøkkelordkontroll var for streng, og ba om: (1) en faktisk undersøkelse (ikke gjetting) av om SQL-gapet ble utelatt av modellen eller fjernet av `grounding.py`, (2) en vurdering av hvordan vi kan beholde semantisk relevante koblinger uten å godta åpenbart feilaktige (bacheloroppgave→Power BI), (3) en forenkling/begrensning av heuristikken i stedet for et mer komplisert regelverk, samtidig som (4) literal sitatkontroll og (5) eksisterende API-format/demomodus skulle bevares.
+
+### Plan
+- Undersøkte årsaken empirisk (ikke gjettet): kjørte `_shares_relevant_keyword`/`_significant_words` direkte med representativ SQL-tekst, og bekreftet at ordet "sql" (3 bokstaver) ble utelukket av en minstelengde på 4 i BÅDE gap-beskrivelsen og kravsitatet – dermed null delt nøkkelord, og gapet ble (under forrige kode) garantert fjernet av `_clean_gap`, uavhengig av hva modellen egentlig svarte. Siden selve rå-svaret fra modellen aldri logges (bevisst, for å unngå lagring av CV-/annonseinnhold), kan jeg ikke bekrefte 100 % at modellen *også* leverte gapet riktig i den spesifikke historiske sesjonen – men jeg har bevist at koden uansett ville slettet det. Dette er forklart ærlig i rapporten til brukeren, ikke fremstilt som en absolutt sikker konklusjon om den ene, konkrete hendelsen.
+- Besluttet en forenkling i stedet for en mer komplisert regel: nøkkelord-heuristikken brukes nå BEGRENSET – den avgjør ALDRI om et obligatorisk kildesitat (`job_ad_excerpt` for kompetansegap/CV-forslag) beholdes (kun ordrett sitatkontroll gjør det der), men brukes fortsatt til å luke `related_requirement_ids` (lav kostnad å ta feil: funnet vises fortsatt) og til styrkers obligatoriske `cv_excerpt` og CV-forslags valgfrie `cv_excerpt` (uendret fra forrige økt, ikke rapportert som problematisk).
+- Fjernet lengdekravet på 4 bokstaver (nå 3), og la samtidig korte norske grammatiske fyllord ("som", "for", "med", "har", ...) til den eksisterende, enkle ordlisten, slik at korte fagord som "SQL" kan telle uten å åpne for at vanlige småord skaper falske treff.
+- Erkjente og dokumenterte en reell, akseptert begrensning i stedet for å late som den er løst: en ren nøkkelord-heuristikk kan ikke skille "åpenbart feilkoblet" fra "reelt relatert, men med andre ord" (kundeservice/opplæring vs. kommunikasjonsevner) – dette løses ikke her, siden en ordentlig løsning (semantisk sammenligning/synonymordbok) ville vært det brukeren eksplisitt ba om å unngå.
+- La til logging i `analysis_service.py` av antall funn før/etter grunnlagskontrollen (kun tall, aldri innhold), slik at fremtidige ekte kall kan vise direkte om noe ble fjernet av grunnlagskontrollen – dette tetter nettopp det hullet som gjorde årsaksgranskningen denne gangen vanskelig.
+- Skrev målrettede tester: en direkte regresjonstest på selve rotårsaken (SQL telles nå som nøkkelord), en test som speiler det konkrete SQL-gapet, en test som dokumenterer den aksepterte begrensningen (kundeservice/kommunikasjon), en regresjonstest for at korte norske fyllord fortsatt ikke gir falske treff, og tester for den nye loggingen (bekrefter at den faktisk logger antall, og aldri logger CV-/annonseinnhold).
+
+### Resultat
+Endrede filer:
+- `backend/app/grounding.py` – nøkkelord-relevans er ikke lenger en del av om `job_ad_excerpt` (kompetansegap/CV-forslag) beholdes (kun ordrett kontroll); minstelengde senket fra 4 til 3; utvidet fyllord-/stoppordliste; utvidet docstring med årsaksgranskningen og de bevisste avveiningene.
+- `backend/app/analysis_service.py` – ny `_log_grounding_effect()`, kalt etter `enforce_grounding`, logger kun antall funn før/etter (ingen tekstinnhold).
+- `backend/tests/test_grounding.py` – nye/justerte tester (se Plan).
+- `backend/tests/test_analysis_service.py` – to nye tester for logging av grunnlagskontroll-effekten.
+
+Ingen endring av `AnalysisResult`/`SourceReference`/API-responsformatet, og demomodus (`GET /api/analyze/demo`) er urørt.
+
+Testresultat: `uv run pytest -q` → **66 passed, 0 failed** (opp fra 59). Ingen ekte eller betalte OpenAI-kall ble gjort.
+
+Bekreftet på nytt at `backend/.env` (brukerens ekte nøkkel, åpnet i IDE under denne økten også) fortsatt er korrekt gitignored og ikke er rørt av meg.
+
+Ingen git-commit/push er gjort (på brukerens eksplisitte instruks) – kun denne loggfilen committes av `sesjonslogg`-skillen.
+
+### Åpne punkter
+- Den dokumenterte begrensningen (kundeservice/opplæring → kommunikasjonsevner forblir ukoblet) er IKKE løst, kun bevisst akseptert og testet som kjent oppførsel – hvis gruppen senere vil forbedre dette, er neste skritt utenfor denne øktens scope (f.eks. en liten synonym-/kategoriliste, eller en enkel LLM-basert "er denne koblingen rimelig?"-verifisering).
+- Brukeren bør kjøre et nytt ekte kall for å bekrefte at SQL-gapet nå vises, og se i backend-loggen (`_log_grounding_effect`) om grunnlagskontrollen fjerner noe uventet.
+- Øvrige åpne punkter er uendret, se `issues.md`.
