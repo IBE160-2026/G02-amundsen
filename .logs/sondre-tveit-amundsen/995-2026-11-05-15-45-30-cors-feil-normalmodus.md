@@ -27,3 +27,23 @@ Ingen git-commit/push av kodeendringene er gjort (på brukerens eksplisitte inst
 
 ### Åpne punkter
 Ingen nye. Øvrige åpne punkter er uendret, se `issues.md`.
+
+## 2026-11-05 kl. 15:54 — Sondre Tveit Amundsen
+
+### Oppgave
+Brukeren gjennomførte en vellykket, fullstendig manuell ende-til-ende-test i nettleseren (frontend `http://localhost:5174`, backend `http://127.0.0.1:8001`) etter CORS-fiksen: demomodus fungerte, normalmodus fikk et ekte OpenAI-svar med relevante, kildehenviste styrker, SQL og Power BI korrekt som kompetansegap, relevante CV-forslag, og et faktabasert søknadsutkast (uten oppdiktede kvalifikasjoner) – med den mindre observasjonen at utkastet er noe generelt. Oppgaven var rent dokumentasjon: oppdatere `process-log.md` med testen, resultatene og en kort kritisk vurdering, og registrere gjenværende begrensninger – ingen kodeendringer, ingen nye API-kall.
+
+### Plan
+- Leste slutten av `process-log.md` (CORS-seksjonen fra samme dag) for å finne riktig sted å fortsette.
+- Skrev en ny, egen seksjon «Vellykket manuell ende-til-ende-test i nettleseren» med testflyt/resultater, en kort kritisk vurdering (bekrefter hele kjeden frontend→CORS→backend→OpenAI→grunnlagskontroll→visning fungerer i praksis; den generelle søknadsutkast-formuleringen er et forbedringspunkt, ikke en korrekthetsfeil; testingen dekker kun ett testsett), og en liste over fire gjenværende, kjente begrensninger.
+- Kontrollerte med `git status` at ingen applikasjonskode ble rørt denne økten – kun `process-log.md`.
+
+### Resultat
+- `process-log.md` (endret) – ny seksjon lagt til, ingen eksisterende innhold fjernet.
+- Ingen kode- eller testfiler endret. Ingen nye (ekte eller mockede) API-kall ble gjort av Claude Code i denne gjennomgangen.
+- Ingen git-commit/push er gjort (på brukerens eksplisitte instruks) – kun denne loggfilen committes av `sesjonslogg`-skillen.
+
+### Åpne punkter
+- Søknadsutkastet oppleves som noe generelt – mulig forbedringspunkt (språklig kvalitet), ikke en korrekthetsfeil.
+- Testingen er så langt gjort med ett testsett (én fiktiv CV/stillingsannonse) – bredere testing mot flere, varierte CV-er/stillinger gjenstår.
+- Øvrige åpne punkter (inkl. den aksepterte `related_requirement_ids`-begrensningen) er uendret, se `issues.md`.
