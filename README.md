@@ -4,6 +4,8 @@ Gruppeprosjekt i **IBE160 Programmering med KI** ved Høgskolen i Molde, høsten
 
 Repoet inneholder gruppens applikasjon **Career Transition Assistant** og dokumentasjon av utvikling, testing og kvalitetssikring med KI. Se [`prd.md`](prd.md), [`architecture.md`](architecture.md) og [`epics-and-stories.md`](epics-and-stories.md) for produkt- og arkitekturbeskrivelse.
 
+**Publisert applikasjon:** **https://g02-amundsen.vercel.app/** – demomodus fungerer direkte, uten noen API-nøkkel (se "Publisering på Vercel" under for status på normalmodus i produksjon).
+
 ## Medlemmer
 
 - Sondre Tveit Amundsen
@@ -64,26 +66,35 @@ cd frontend && npm test
 
 ## Publisering på Vercel
 
-IBE160 bruker Vercel som offisiell publiseringsløsning. Repoet er forberedt for
-publisering med én **Vercel Services**-konfigurasjon i [`vercel.json`](vercel.json) i
-repo-roten, som lar frontend (`frontend/`) og backend (`backend/`) kjøre som to
-tjenester i **ett** Vercel-prosjekt, på samme domene: alt under `/api/*` rutes til
-FastAPI-backenden, resten rutes til React/Vite-frontenden. Se `architecture.md`
-avsnitt 10 for begrunnelse og alternativ løsning.
+IBE160 bruker Vercel som offisiell publiseringsløsning. Applikasjonen er publisert på
+**https://g02-amundsen.vercel.app/**, med én **Vercel Services**-konfigurasjon i
+[`vercel.json`](vercel.json) i repo-roten: frontend (`frontend/`) og backend
+(`backend/`) kjører som to tjenester i **ett** Vercel-prosjekt, på samme domene – alt
+under `/api/*` rutes til FastAPI-backenden, resten rutes til React/Vite-frontenden. Se
+`architecture.md` avsnitt 10 for begrunnelse og alternativ løsning.
 
-Dette er foreløpig kun forberedt, ikke publisert – ingen Vercel-prosjekt er opprettet.
+### Status i produksjon
 
-### Manuelt i Vercel (når prosjektet opprettes)
+- **Demomodus fungerer** på den publiserte siden, uten API-nøkkel – bekreftet manuelt i
+  nettleseren.
+- **Normalmodus er ikke aktivert i produksjon.** `OPENAI_API_KEY` er bevisst **ikke**
+  lagt inn i Vercel, for å unngå at en offentlig, uinnlogget side kan bruke opp
+  forhåndsbetalte OpenAI-kreditter før gruppen har satt et forbrukstak. Et besøk i
+  normalmodus på den publiserte siden gir derfor en ren 503-feilmelding
+  ("ingen gyldig API-nøkkel"), ikke en krasj.
+- For å teste normalmodus med ekte KI-analyse akkurat nå: kjør applikasjonen **lokalt**
+  med din egen `OPENAI_API_KEY` (se "Kjøre applikasjonen lokalt" over).
 
-1. Koble repoet til Vercel via GitHub-integrasjonen (gjøres i Vercel-dashbordet).
-2. Sett miljøvariabelen `OPENAI_API_KEY` for **Production**-miljøet i Vercel sitt
-   dashbord (eller med `vercel env add`) – **aldri** i en fil som committes.
+### Manuelt i Vercel (gjenstår før normalmodus kan aktiveres i produksjon)
+
+1. Sett et forbrukstak/budsjettgrense for API-nøkkelen direkte i OpenAI sin plattform –
+   dette er det viktigste forsvaret mot at uvedkommende bruker opp kredittene, siden v1
+   ikke har innlogging.
+2. Sett deretter miljøvariabelen `OPENAI_API_KEY` for **Production**-miljøet i Vercel
+   sitt dashbord (eller med `vercel env add`) – **aldri** i en fil som committes.
    `OPENAI_MODEL` og `OPENAI_TIMEOUT_SECONDS` er valgfrie (har standardverdier i koden).
-3. Sett **ikke** `OPENAI_API_KEY` på Preview-miljøet – da fungerer demomodus på alle
-   forhåndsvisninger, mens normalmodus der gir en ren 503-feilmelding i stedet for å
-   kunne bruke API-kreditter.
-4. Sett et forbrukstak/budsjettgrense for API-nøkkelen direkte i OpenAI sin
-   plattform, før lenken deles med andre – dette er det viktigste forsvaret mot at
-   uvedkommende bruker opp kredittene, siden v1 ikke har innlogging.
-5. `VITE_API_BASE_URL` skal **ikke** settes i produksjon – frontend velger automatisk
+3. Sett **ikke** `OPENAI_API_KEY` på Preview-miljøet – da fortsetter demomodus å
+   fungere på alle forhåndsvisninger, mens normalmodus der gir en ren 503-feilmelding
+   i stedet for å kunne bruke API-kreditter.
+4. `VITE_API_BASE_URL` skal **ikke** settes i produksjon – frontend velger automatisk
    en relativ adresse der.

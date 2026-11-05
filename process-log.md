@@ -572,3 +572,64 @@ Minst mulig endring som løser problemet fullt ut:
 Feilen er rettet lokalt og dekket av en ny test. Gjenstår: publisere denne endringen på
 nytt til det eksisterende Vercel-prosjektet (ingen nytt prosjekt opprettes), og bekrefte
 at demomodus fungerer i produksjon etterpå.
+
+
+## 05.11.2026 – Vellykket publisering bekreftet, normalmodus bevisst holdt av i produksjon
+
+### Status
+
+Career Transition Assistant er publisert på **https://g02-amundsen.vercel.app/**
+(siste applikasjonscommit `c10c0f7`). Frontend og FastAPI-backend kjører sammen som
+to Vercel Services i ett prosjekt, slik planlagt.
+
+**Manuell bekreftelse:** åpnet den publiserte siden i nettleseren, kjørte demomodus og
+bekreftet at resultatet (krav, styrker, kompetansegap, CV-forslag, søknadsutkast) vises
+riktig – demodatafeilen fra forrige fase er dermed bekreftet rettet i produksjon, ikke
+bare lokalt.
+
+**Normalmodus med ekte OpenAI er bevisst IKKE aktivert i produksjon.**
+`OPENAI_API_KEY` er ikke lagt inn i Vercel, nettopp for å beskytte gruppens
+forhåndsbetalte OpenAI-kreditter mot at en offentlig, uinnlogget side kan bli brukt av
+uvedkommende før et forbrukstak er satt hos OpenAI. Normalmodus med ekte KI-analyse er
+testet grundig lokalt i tidligere økter (se seksjonene over), og kan testes lokalt med
+egen API-nøkkel når som helst – den er ikke utestet, bare bevisst ikke eksponert
+offentlig ennå.
+
+### Oppsummering: demodata-feilen (se også forrige seksjon)
+
+Etter første publisering viste demomodus feilmeldingen "Kunne ikke laste demodata."
+Årsaken var at `test-data/`-mappen lå utenfor `backend/`-tjenestens rot, og derfor ikke
+ble inkludert i Vercel sin Python-funksjonsbunt. Feilen ble oppdaget ved manuell testing
+i produksjon rett etter publisering, rettet ved å flytte mappen inn i
+`backend/test-data/` og justere én filsti i `demo_data.py`, dekket av en ny
+regresjonstest, og er nå bekreftet rettet ved en ny, manuell test av den publiserte
+siden (se "Manuell bekreftelse" over).
+
+### Kritisk refleksjon: lokal testing vs. produksjon
+
+Denne publiseringsrunden er et konkret eksempel på at lokal testing ikke fanger opp
+alle feil en reell driftsplattform kan introdusere: alle 78 backend-testene og alle
+manuelle lokale forsøk fungerte fint, fordi de kjører med hele repoet samlet på disk.
+Først da applikasjonen faktisk kjørte som en isolert, bundlet Vercel-funksjon, ble det
+synlig at en antakelse i koden (at `test-data/` alltid ligger tilgjengelig relativt til
+repo-roten) ikke holdt i en serverless produksjonsplattform. Lærdommen tas med videre:
+en automatisert test kan bekrefte at koden gjør det den skal *i det miljøet den kjører
+i* – den kan ikke alene bevise at den fungerer i et annet, strukturelt forskjellig
+miljø (som en serverless funksjon med et begrenset filsystem). Manuell testing direkte
+mot den publiserte applikasjonen var derfor nødvendig, ikke bare en formalitet.
+
+### KI-bruk og kritisk vurdering
+
+- Claude Code ble brukt til å dokumentere status, ikke til å gjøre nye kodeendringer –
+  ingen avvik mellom dokumentert og faktisk oppførsel ble funnet ved gjennomgang av
+  `architecture.md`, så den ble latt uendret.
+- Claude Code ble instruert om ikke å legge inn `OPENAI_API_KEY` i Vercel selv, og ikke
+  å gjøre ekte API-kall – dette forblir en bevisst, manuell beslutning hos gruppen.
+
+### Neste steg
+
+1. Sette et forbrukstak/budsjettgrense for API-nøkkelen hos OpenAI.
+2. Deretter legge `OPENAI_API_KEY` inn på Production-miljøet i Vercel, for å aktivere
+   normalmodus i produksjon.
+3. Gjøre én bevisst, villet ekte testforespørsel mot normalmodus i produksjon etterpå,
+   for å bekrefte hele kjeden der.
