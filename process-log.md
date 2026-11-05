@@ -180,3 +180,115 @@ Career Transition Assistant har foreløpig ikke et ferdig brukergrensesnitt elle
 5. Teste demomodus fra input til resultat.
 6. Velge språkmodell/API og deretter implementere normalmodus.
 7. Fortsette kvalitetssikring, testing, Git-commits og dokumentasjon av KI-bruk.
+
+
+## 05.11.2026 – Implementering av backend, frontend og fungerende demomodus
+
+### Arbeid utført
+
+**Oppstart og oppdatering av prosjektet**
+- Åpnet prosjektet `G02-amundsen` i VS Code.
+- Kontrollerte Git-status og kjørte `git pull` i tråd med foreleserens instruksjoner.
+- Mottok nye prosjektfiler, blant annet `CLAUDE.md` og `.claude/skills/sesjonslogg/SKILL.md`.
+- Gjennomgikk instruksjonene for sesjonslogging og fortsatte utviklingen med utgangspunkt i eksisterende PRD, arkitektur og epics/stories.
+- Kontrollerte at PRD-en allerede var utarbeidet før fristen 05.11.2026.
+
+**Implementering av backend**
+- Brukte Claude Code til å implementere Pydantic-responsmodeller for strukturerte analyseresultater.
+- Opprettet et demo-endepunkt i FastAPI: `GET /api/analyze/demo`.
+- La til fiktive eksempeldata med CV for Kari Nordmann og stillingsannonse fra Fjord Digital AS.
+- Demoresponsen inneholder stillingskrav, relevante styrker, kompetansegap, CV-forslag, kildereferanser og søknadsutkast.
+- Demomodus fungerer uten ekstern språkmodell eller API-nøkkel.
+- Opprettet automatiserte tester. Alle 20 backend-testene bestod.
+- Lagret backend-implementeringen i Git med commit `ad9bfa9`.
+
+**Implementering av frontend**
+- Brukte Claude Code til å bygge React-grensesnittet med utgangspunkt i PRD og arkitekturen.
+- Implementerte valg mellom demomodus og normalmodus. Normalmodus er foreløpig deaktivert.
+- Opprettet komponenter for visning av CV, stillingsannonse, stillingskrav, styrker, kompetansegap, CV-forslag, sporbarhet og søknadsutkast.
+- Implementerte et redigerbart søknadsutkast.
+- Knyttet frontend til FastAPI gjennom en egen API-klient.
+- Implementerte visning av lastestatus og feilmeldinger.
+- Oppdaterte designet med responsiv styling.
+- La til Vitest og automatiserte frontend-tester.
+- Alle 8 frontend-testene bestod.
+- ESLint og produksjonsbygg ble rapportert som vellykket.
+- Oppdaterte README-filene med informasjon om lokal kjøring.
+- Lagret frontend-implementeringen i Git med commit `fb2e5e4`.
+
+### Tekniske utfordringer og løsninger
+
+**1. Utgått innlogging i Claude Code**
+- Problem: Claude Code viste `Login expired` og kunne ikke starte programmeringsoppgaven.
+- Løsning: Gjennomførte ny innlogging og kontrollerte at Claude Code fikk tilgang til prosjektet.
+- Læring: Innlogging og tilgang til KI-verktøy må kontrolleres før utviklingsarbeidet starter.
+
+**2. Feil port mellom frontend og backend**
+- Problem: Demoanalysen viste feilmeldingen «Kunne ikke nå backend-tjeneren».
+- Årsak: Backend kjørte på port 8001, mens frontend opprinnelig var konfigurert til å kontakte port 8000.
+- Løsning: Endret midlertidig frontend til port 8001 og bekreftet at demoanalysen fungerte. Standardiserte deretter prosjektet på port 8000 og startet backend på nytt.
+- Resultat: Demoanalysen fungerte også etter standardiseringen.
+- Læring: Frontend og backend må ha samsvarende API-konfigurasjon. Automatiske tester alene avdekket ikke denne lokale konfigurasjonsfeilen.
+
+**3. Begrenset nettlesertesting fra Claude Code**
+- Claude Code foreslo å koble seg til Chrome for å gjennomføre nettlesertesting.
+- Valgte å ikke gi denne tilgangen, og gjennomførte i stedet den manuelle funksjonstesten selv.
+- Dette ga mulighet til å kontrollere brukeropplevelsen og vurdere resultatene direkte.
+
+### Testing og kvalitetssikring
+
+**Automatisert testing**
+- Backend: 20 av 20 tester bestått.
+- Frontend: 8 av 8 tester bestått.
+- ESLint og Vite-produksjonsbygg gjennomført uten rapporterte feil.
+
+**Manuell funksjonstesting**
+- Startet FastAPI og React/Vite lokalt i separate terminaler.
+- Åpnet Career Transition Assistant på `http://localhost:5173/`.
+- Bekreftet at demomodus kunne startes fra grensesnittet.
+- Kontrollerte at fiktiv CV og stillingsannonse ble vist.
+- Kontrollerte at stillingskrav, relevante styrker, kompetansegap, CV-forslag og søknadsutkast ble vist.
+- Kontrollerte at CV-forslagene hadde henvisninger til CV og stillingsannonse.
+- Testet at søknadsutkastet kunne redigeres direkte.
+- Testet at kommunikasjonen fortsatt fungerte etter korrigering av API-porten.
+
+**Kvalitetssikring av analyseresultatet**
+- Gjennomgikk tre CV-forslag knyttet til agile arbeidsmetoder, Python/JavaScript og SQL/databaseerfaring.
+- Vurderte at forslagene var relevante for stillingen, men identifiserte behov for å kontrollere at brukeren ikke oppfordres til å legge til udokumentert erfaring.
+- Dette blir viktig ved senere implementering av normalmodus med en ekte språkmodell.
+
+### KI-bruk og kritisk vurdering
+
+- Claude Code ble brukt til å generere backend-modeller, demo-endepunkt, React-komponenter, API-integrasjon, tester og dokumentasjon.
+- ChatGPT ble brukt til å avgrense utviklingsoppgaver, vurdere fremdrift, feilsøke, kontrollere testresultater og veilede i Git.
+- KI-generert kode ble kontrollert gjennom automatiserte tester og manuell funksjonstesting.
+- Portfeilen viste at beståtte automatiserte tester ikke nødvendigvis betyr at hele applikasjonen fungerer i brukerens faktiske utviklingsmiljø.
+- Testing av CV-forslagene synliggjorde risikoen for at KI kan foreslå opplysninger som ikke er dokumentert i brukerens CV.
+- Utviklingen ble delt inn i separate oppgaver for backend og frontend, slik at resultatene kunne testes og lagres underveis.
+- Claude Code ble instruert om ikke å opprette commits eller pushe applikasjonskoden automatisk. Kodeendringene ble kontrollert og committet separat.
+
+### Git og versjonskontroll
+
+- Opprettet commit `ad9bfa9` for backend og demomodus.
+- Opprettet commit `fb2e5e4` med meldingen `Build React frontend and connect demo API`.
+- Kontrollerte endrede og nye filer med `git status`.
+- Pushet implementeringen til GitHub-repositoryet `IBE160-2026/G02-amundsen`.
+- Sesjonslogging fra Claude Code ble tatt i bruk som supplerende dokumentasjon.
+
+### Status ved avslutning av denne utviklingsfasen
+
+Career Transition Assistant har nå en fungerende demomodus med React-frontend og FastAPI-backend.
+
+Brukeren kan starte demoanalysen, se strukturerte resultater med kildereferanser og redigere søknadsutkastet.
+
+Normalmodus med ekte KI-analyse er foreløpig ikke implementert. Den fungerende demomodusen gir et grunnlag for videre utvikling og testing.
+
+### Neste steg
+
+1. Velge språkmodell/API med hensyn til kvalitet, kostnader, strukturert output og Python-integrasjon.
+2. Implementere normalmodus med brukerens egen CV og stillingsannonse som tekst.
+3. Implementere kontroll av KI-genererte påstander mot brukerens faktiske opplysninger.
+4. Teste løsningen mot flere fiktive testsett.
+5. Forbedre feilhåndtering og kvalitetssikre brukergrensesnittet.
+6. Vurdere publisering på Vercel.
+7. Ferdigstille README, prosessdokumentasjon og refleksjonsrapport.
