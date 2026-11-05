@@ -1,0 +1,28 @@
+Stillingsannonse: Junior systemutvikler – Fjord Digital AS (fiktiv bedrift)
+
+Fjord Digital AS leverer digitale løsninger til offentlig sektor og søker en
+junior systemutvikler til teamet vårt i Bergen.
+
+Om stillingen
+Du vil jobbe i et tverrfaglig team med utvikling av webapplikasjoner for våre
+kunder. Du vil bidra både på backend og frontend, og få tett oppfølging fra
+erfarne utviklere.
+
+Vi søker deg som har
+- Bachelor- eller mastergrad innen informatikk, informasjonsteknologi eller tilsvarende
+- Grunnleggende kunnskap i Python eller JavaScript
+- Forståelse for REST-API-er og enkel systemarkitektur
+- Evne til å samarbeide godt i tverrfaglige team
+
+Det er en fordel om du har
+- Erfaring med React eller tilsvarende frontend-rammeverk
+- Kjennskap til Scrum eller andre agile arbeidsmetoder
+- Erfaring med databaser og enkel datamodellering
+- Interesse for brukertesting og brukervennlighet
+
+Vi tilbyr
+- Fadderordning med erfaren utvikler det første året
+- Fleksibel arbeidstid og mulighet for hjemmekontor
+- Faglig utvikling gjennom kurs og intern opplæring
+
+Søknadsfrist: 1. desember 2026

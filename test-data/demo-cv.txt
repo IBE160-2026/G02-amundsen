@@ -1,0 +1,33 @@
+Kari Nordmann
+kari.nordmann@example.com | +47 123 45 678 | Bergen
+
+UTDANNING
+Master i informatikk, fiktivt universitet, 2023–2026 (avsluttes juni 2026)
+- Fordypning i programvareutvikling og systemutvikling
+- Masteroppgave om brukertesting av et internt webverktøy
+
+Bachelor i informasjonsteknologi, fiktiv høgskole, 2019–2022
+
+ERFARING
+IT-support (deltid), Fiktiv Kommune, aug 2021 – jun 2023
+- Brukerstøtte for ansatte, feilsøking av Windows- og nettverksproblemer
+- Dokumenterte rutiner for vanlige support-saker
+
+Webansvarlig (frivillig), Studentforeningen IT-linja, 2022–2023
+- Utviklet og vedlikeholdt foreningens nettside i HTML, CSS og JavaScript
+- Samarbeidet med styret om innhold og publisering
+
+Gruppeprosjekt – Systemutvikling, høst 2024
+- Utviklet en webapplikasjon i Python (Flask) og React som del av et kurs i systemutvikling
+- Ansvarlig for backend-API og enkel datalagring
+- Arbeidet i tverrfaglig gruppe med ukentlige sprinter
+
+FERDIGHETER
+- Python, JavaScript, HTML/CSS
+- Grunnleggende React og Flask
+- Git og GitHub
+- Grunnleggende SQL
+- Norsk (morsmål), engelsk (godt skriftlig og muntlig)
+
+ANNET
+- Deltok på et studenthackathon i 2023 med prosjekt om bærekraftig transport

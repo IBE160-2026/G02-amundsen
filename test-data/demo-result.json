@@ -1,0 +1,132 @@
+{
+  "job_requirements": [
+    {
+      "id": "r1",
+      "description": "Bachelor- eller mastergrad innen informatikk, informasjonsteknologi eller tilsvarende",
+      "priority": "sentral"
+    },
+    {
+      "id": "r2",
+      "description": "Grunnleggende kunnskap i Python eller JavaScript",
+      "priority": "sentral"
+    },
+    {
+      "id": "r3",
+      "description": "Forståelse for REST-API-er og enkel systemarkitektur",
+      "priority": "sentral"
+    },
+    {
+      "id": "r4",
+      "description": "Evne til å samarbeide godt i tverrfaglige team",
+      "priority": "sentral"
+    },
+    {
+      "id": "r5",
+      "description": "Erfaring med React eller tilsvarende frontend-rammeverk",
+      "priority": "ønskelig"
+    },
+    {
+      "id": "r6",
+      "description": "Kjennskap til Scrum eller andre agile arbeidsmetoder",
+      "priority": "ønskelig"
+    },
+    {
+      "id": "r7",
+      "description": "Erfaring med databaser og enkel datamodellering",
+      "priority": "ønskelig"
+    },
+    {
+      "id": "r8",
+      "description": "Interesse for brukertesting og brukervennlighet",
+      "priority": "ønskelig"
+    }
+  ],
+  "strengths": [
+    {
+      "id": "s1",
+      "description": "Du har en mastergrad i informatikk med fordypning i programvareutvikling, som dekker kravet om relevant utdanning.",
+      "related_requirement_ids": ["r1"],
+      "source": {
+        "cv_excerpt": "Master i informatikk, fiktivt universitet, 2023–2026 ... Fordypning i programvareutvikling og systemutvikling",
+        "job_ad_excerpt": "Bachelor- eller mastergrad innen informatikk, informasjonsteknologi eller tilsvarende"
+      }
+    },
+    {
+      "id": "s2",
+      "description": "Gjennom gruppeprosjektet har du bygget en webapplikasjon med Python (Flask) og React, med ansvar for backend-API, noe som dekker kravene til programmeringskunnskap og forståelse for API-er.",
+      "related_requirement_ids": ["r2", "r3", "r5"],
+      "source": {
+        "cv_excerpt": "Gruppeprosjekt – Systemutvikling, høst 2024: Utviklet en webapplikasjon i Python (Flask) og React ... Ansvarlig for backend-API og enkel datalagring",
+        "job_ad_excerpt": "Grunnleggende kunnskap i Python eller JavaScript; Forståelse for REST-API-er og enkel systemarkitektur; Erfaring med React eller tilsvarende frontend-rammeverk"
+      }
+    },
+    {
+      "id": "s3",
+      "description": "Du har erfaring med å samarbeide i tverrfaglige grupper, både gjennom gruppeprosjektet og som webansvarlig i en studentforening, noe som dekker kravet om samarbeidsevne.",
+      "related_requirement_ids": ["r4"],
+      "source": {
+        "cv_excerpt": "Arbeidet i tverrfaglig gruppe med ukentlige sprinter; Samarbeidet med styret om innhold og publisering",
+        "job_ad_excerpt": "Evne til å samarbeide godt i tverrfaglige team"
+      }
+    },
+    {
+      "id": "s4",
+      "description": "Masteroppgaven din handler om brukertesting av et internt webverktøy, som dekker interessen for brukertesting og brukervennlighet.",
+      "related_requirement_ids": ["r8"],
+      "source": {
+        "cv_excerpt": "Masteroppgave om brukertesting av et internt webverktøy",
+        "job_ad_excerpt": "Interesse for brukertesting og brukervennlighet"
+      }
+    }
+  ],
+  "competency_gaps": [
+    {
+      "id": "g1",
+      "description": "CV-en nevner grunnleggende SQL under ferdigheter, men beskriver ingen konkret erfaring med databasedesign eller datamodellering i et prosjekt, som stillingen ønsker.",
+      "related_requirement_ids": ["r7"],
+      "source": {
+        "cv_excerpt": "Grunnleggende SQL",
+        "job_ad_excerpt": "Erfaring med databaser og enkel datamodellering"
+      }
+    },
+    {
+      "id": "g2",
+      "description": "CV-en nevner ukentlige sprinter i et gruppeprosjekt, men sier ikke eksplisitt at Scrum eller en annen agil arbeidsmetode ble brukt, som stillingen etterspør.",
+      "related_requirement_ids": ["r6"],
+      "source": {
+        "cv_excerpt": "Arbeidet i tverrfaglig gruppe med ukentlige sprinter",
+        "job_ad_excerpt": "Kjennskap til Scrum eller andre agile arbeidsmetoder"
+      }
+    }
+  ],
+  "cv_suggestions": [
+    {
+      "id": "c1",
+      "suggestion": "Legg til en kort linje under gruppeprosjektet som sier eksplisitt om arbeidet fulgte Scrum eller en annen navngitt agil metode, siden dette er en ønsket kvalifikasjon i stillingen.",
+      "related_requirement_ids": ["r6"],
+      "source": {
+        "cv_excerpt": "Arbeidet i tverrfaglig gruppe med ukentlige sprinter",
+        "job_ad_excerpt": "Kjennskap til Scrum eller andre agile arbeidsmetoder"
+      }
+    },
+    {
+      "id": "c2",
+      "suggestion": "Flytt eller fremhev Python- og JavaScript-ferdighetene tidligere i CV-en, gjerne i et kort sammendrag øverst, siden dette er et sentralt krav i stillingen.",
+      "related_requirement_ids": ["r2"],
+      "source": {
+        "cv_excerpt": "Python, JavaScript, HTML/CSS",
+        "job_ad_excerpt": "Grunnleggende kunnskap i Python eller JavaScript"
+      }
+    },
+    {
+      "id": "c3",
+      "suggestion": "Beskriv kort hvordan datalagringen i gruppeprosjektet var bygget opp (f.eks. hvilken database som ble brukt), for å underbygge SQL-kunnskapen med et konkret eksempel.",
+      "related_requirement_ids": ["r7"],
+      "source": {
+        "cv_excerpt": "Ansvarlig for backend-API og enkel datalagring",
+        "job_ad_excerpt": "Erfaring med databaser og enkel datamodellering"
+      }
+    }
+  ],
+  "application_draft": "Jeg søker på stillingen som junior systemutvikler hos Fjord Digital AS. Jeg fullfører i juni 2026 en master i informatikk med fordypning i programvareutvikling, etter en bachelor i informasjonsteknologi.\n\nGjennom et gruppeprosjekt i systemutvikling bygde jeg, sammen med en tverrfaglig gruppe, en webapplikasjon med Python (Flask) på backend og React på frontend, der jeg hadde ansvar for backend-API og enkel datalagring. Jeg har også erfaring som webansvarlig for en studentforening, der jeg utviklet og vedlikeholdt nettsiden i HTML, CSS og JavaScript, samt som IT-support der jeg jobbet med brukerstøtte og feilsøking.\n\nI masteroppgaven min har jeg arbeidet med brukertesting av et internt webverktøy, noe jeg tror er relevant for en stilling som legger vekt på brukervennlighet. Jeg ser frem til å bidra i et tverrfaglig team og videreutvikle meg faglig som systemutvikler hos Fjord Digital AS.\n\nMed vennlig hilsen\nKari Nordmann"
+}
