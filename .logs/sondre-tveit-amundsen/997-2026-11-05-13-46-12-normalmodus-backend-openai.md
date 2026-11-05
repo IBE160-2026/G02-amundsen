@@ -44,3 +44,36 @@ Ingen reell API-nøkkel ble opprettet, og ingen `backend/.env`-fil ble laget (ko
 - Grunnlagskontrollen (`grounding.py`) kontrollerer kun at kildesitater faktisk finnes i input (luker bort oppdiktede sitater), ikke at selve *tolkningen* av et ekte sitat er riktig – dette er en kjent og bevisst begrensning, ikke en feil.
 - `job_requirements` og `application_draft` har ingen egen sporbarhets-/grunnlagskontroll i skjemaet (kun styrker, kompetansegap og CV-forslag kontrolleres), siden `JobRequirement` ikke har et `source`-felt – dette er uendret fra forrige økts skjemadesign.
 - Fra tidligere økter: ubrukt `backend/src/backend/__init__.py`, ekte browser-klikk-test av frontend er ikke gjort, og en moderate `minimatch`-sårbarhet i frontendens eslint-avhengighetskjede står fortsatt åpen.
+
+## 2026-11-05 kl. 14:32 — Sondre Tveit Amundsen
+
+### Oppgave
+Brukeren gjennomførte sitt første ekte `POST /api/analyze`-kall mot OpenAI (200 OK, ingen oppdiktede kvalifikasjoner i søknadsutkastet), men fant ved manuell kvalitetssikring tre feilkoblinger: (1) en styrke (S5, om en bacheloroppgave om kundetilfredshet) var koblet til et krav om Power BI (JR5) som ikke er dokumentert i CV-en, (2) et kompetansegap (G3, om rapportering/presentasjon) var koblet til feil krav (JR4, kommunikasjonsevner), og (3) et CV-forslag (C5) var korrekt formulert som betinget, men `cv_excerpt` dokumenterte ikke Power BI. Oppgaven var å forbedre prompt og backend-validering slik at funn kobles riktig til krav, og tydelig skille dokumentert kompetanse / manglende kompetansedokumentasjon / betingede forslag – uten å endre API-responsformatet.
+
+### Plan
+- Analyserte de tre feilene som ett felles problem: et sitat kan være ordrett ekte (bestått av eksisterende `enforce_grounding`) uten at *koblingen* det brukes til (krav-ID, eller hvilken påstand det underbygger) er riktig. Eksisterende grunnlagskontroll fanget bare opp oppdiktede sitater, ikke feilkoblinger.
+- Skrev om `backend/app/grounding.py`: la til en enkel, deterministisk nøkkelord-overlapp-heuristikk (`_shares_relevant_keyword`, med en liste over generiske fyllord som "erfaring"/"kompetanse" unntatt fra å telle som treff), og brukte den til å (a) luke `related_requirement_ids` for krav som ikke tematisk handler om samme sak som funnet, og (b) luke bort kildesitater som er ordrett ekte men irrelevante for funnets egen påstand.
+- Innførte type-spesifikke regler for å skille de tre kategoriene tydelig innenfor eksisterende skjema (ingen nye felt): `Strength.source.cv_excerpt` er obligatorisk (dokumentert kompetanse); `CompetencyGap.source.cv_excerpt` settes alltid til `None` (manglende dokumentasjon per definisjon), `job_ad_excerpt` er obligatorisk; `CvSuggestion.source.job_ad_excerpt` er obligatorisk, `cv_excerpt` er valgfritt og fjernes hvis irrelevant (representerer et betinget forslag om noe som ikke er dokumentert).
+- Oppdaterte `backend/app/prompts.py` med tre nye regler (6–8) som eksplisitt forbyr generiske krav-koblinger og instruerer modellen om riktig bruk av `cv_excerpt`/`job_ad_excerpt` per kategori.
+- Skrev om `backend/tests/test_grounding.py` fullstendig, inkludert tre tester som speiler nøyaktig de rapporterte feilene (S5/JR5, G3/JR4, C5/Power BI), og justerte to eksisterende tester (`test_successful_analysis_returns_parsed_result` i `test_analysis_service.py`, og begge testene i `test_llm_client.py`) som sluttet å stemme med ny, strengere oppførsel.
+- Oppdaget og fikset en reell test-isolasjonsfeil underveis: `test_llm_client.py` leste faktisk den virkelige `backend/.env`-filen (som nå finnes med brukerens ekte nøkkel, opprettet mellom øktene) i stedet for å være uavhengig av miljøet – fikset ved å mocke `get_settings` direkte med `Settings(..., _env_file=None)` i stedet for å sette/fjerne miljøvariabler.
+
+### Resultat
+Endrede filer:
+- `backend/app/grounding.py` – fullstendig omskrevet med nøkkelord-relevans-kontroll og type-spesifikke regler (se Plan).
+- `backend/app/prompts.py` – tre nye regler (6–8) i systemprompten.
+- `backend/tests/test_grounding.py` – omskrevet, inkludert tre tester som speiler de konkrete rapporterte feilene.
+- `backend/tests/test_analysis_service.py`, `backend/tests/test_llm_client.py` – justerte to fixtures/tester til ny, strengere oppførsel (ikke funksjonelle feil i produksjonskoden, bare utdaterte testfixtures).
+
+Ingen endring av `AnalysisResult`/`SourceReference`/API-responsformatet – kun validerings- og promptlogikk.
+
+Testresultat: `uv run pytest -v` → **59 passed, 0 failed** (opp fra 58). Ingen ekte eller betalte OpenAI-kall ble gjort – alt mockes som før.
+
+Bekreftet at `backend/.env` (med brukerens ekte nøkkel) fortsatt er korrekt dekket av `.gitignore` (`git check-ignore -v`), at den ikke vises i `git status`, og at nøkkelen ikke er gjengitt eller logget noe sted i denne økten.
+
+Ingen git-commit/push er gjort (på brukerens eksplisitte instruks) – kun denne loggfilen committes av `sesjonslogg`-skillen.
+
+### Åpne punkter
+- Den nye nøkkelord-relevans-heuristikken er en tilnærming, ikke semantisk forståelse: den kan i prinsippet avvise en riktig kobling formulert med helt andre ord, eller slippe gjennom en feilkobling som tilfeldigvis deler et vanlig ord – dokumentert som en kjent begrensning i `grounding.py`.
+- Den konkrete, ekte OpenAI-analysen som avdekket de tre feilene er ikke lagret/retestet mot den nye koden (bruker har ikke gjenkjørt det samme virkelige kallet) – neste reelle test bør kontrollere at de samme tre feilkoblingene faktisk forsvinner i praksis, ikke bare i de syntetiske testene.
+- Øvrige åpne punkter er uendret, se over og `issues.md`.
