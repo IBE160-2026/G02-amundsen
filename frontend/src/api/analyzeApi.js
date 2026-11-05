@@ -4,8 +4,17 @@
 // (architecture.md, avsnitt "Backend"). Frontenden snakker kun med
 // backendens REST-API, aldri direkte med en språkmodell-leverandør, og har
 // ingen API-nøkkel eller annen hemmelig konfigurasjon (NFR4).
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
+//
+// I produksjon (Vercel Services, se vercel.json) kjører frontend og backend
+// på samme domene, og en tom/relativ adresse ("") er derfor riktig – da
+// rutes f.eks. "/api/analyze/demo" til backend-servicen uten noe eget
+// origin. Lokalt kjører de som to separate utviklingsservere, så vi faller
+// tilbake til backendens lokale adresse. `VITE_API_BASE_URL` kan fortsatt
+// overstyre begge, men vanlig bruk krever ingen miljøvariabel i det hele
+// tatt – riktig adresse velges automatisk ut fra om bygget er for
+// utvikling eller produksjon (`import.meta.env.DEV`).
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '')
 
 export class AnalyzeApiError extends Error {
   constructor(message, { status } = {}) {

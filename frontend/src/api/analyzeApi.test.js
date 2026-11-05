@@ -1,6 +1,51 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AnalyzeApiError, fetchDemoAnalysis, fetchNormalAnalysis } from './analyzeApi'
 
+// Modulen leser API_BASE_URL én gang ved import, så disse testene stubber
+// Vite sine DEV/PROD-flagg og miljøvariabelen FØR en fersk import av
+// modulen (vi.resetModules), i stedet for å teste den allerede importerte
+// instansen over.
+describe('API_BASE_URL – utvikling bruker localhost, eksplisitt adresse overstyrer', () => {
+  // `import.meta.env.DEV`/`PROD` er verdier Vite setter statisk ved bygging
+  // (inlinet i koden, ikke en vanlig miljøvariabel), så de kan ikke stubbes
+  // meningsfullt i en enkelt vitest-kjøring – det faktiske produksjonsutfallet
+  // (relativ adresse) kontrolleres i stedet ved å inspisere det ferdige
+  // produksjonsbygget (`npm run build`), se sluttrapporten for denne økten.
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
+  it('kaller backendens lokale adresse i utvikling når VITE_API_BASE_URL ikke er satt', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', undefined)
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { fetchDemoAnalysis: fetchDemoInDev } = await import('./analyzeApi')
+    await fetchDemoInDev()
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://127.0.0.1:8000/api/analyze/demo',
+      expect.anything(),
+    )
+  })
+
+  it('en eksplisitt VITE_API_BASE_URL overstyrer standardvalget', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'https://egendefinert-backend.example.com')
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { fetchDemoAnalysis: fetchDemoWithOverride } = await import('./analyzeApi')
+    await fetchDemoWithOverride()
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://egendefinert-backend.example.com/api/analyze/demo',
+      expect.anything(),
+    )
+  })
+})
+
 describe('fetchDemoAnalysis', () => {
   afterEach(() => {
     vi.unstubAllGlobals()

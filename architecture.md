@@ -178,6 +178,7 @@ G02-amundsen/
 │
 ├── .env.example
 ├── .gitignore
+├── vercel.json
 └── README.md
 
 ### Prinsipper
@@ -317,3 +318,64 @@ Brukeren skal ikke måtte opprette konto i applikasjonen.
 
 ### Privacy by Design
 Første versjon skal bevisst unngå funksjoner som krever permanent lagring av personopplysninger.
+
+## 10. Deployment (Vercel)
+
+IBE160 bruker Vercel som offisiell publiseringsløsning, og grupperepoene er tilknyttet
+Vercel-integrasjonen via GitHub.
+
+### Ett Vercel-prosjekt med Services
+
+Frontend og backend publiseres som **ett Vercel-prosjekt**, ved hjelp av Vercel sin
+**Services**-funksjon (beta). Oppsettet er definert i `vercel.json` i repo-roten:
+
+- `frontend/` kjøres som en egen Vite-tjeneste (statisk bygg, auto-detektert).
+- `backend/` kjøres som en egen Python/FastAPI-tjeneste (`app.main:app`, Vercel Function).
+- Alle forespørsler til `/api/*` rutes til backend-tjenesten, resten rutes til frontend-tjenesten.
+
+Siden begge tjenestene deler domene i produksjon, er det **ingen CORS-problematikk i
+produksjon** – CORS-oppsettet i `backend/app/main.py` er kun nødvendig for lokal
+utvikling, der frontend og backend kjører som separate utviklingsservere på hver sin
+port (se avsnitt 6).
+
+Alternativ løsning dersom Services (beta) skulle skape problemer: to separate
+Vercel-prosjekter (ett for `frontend/`, ett for `backend/`), koblet sammen med Vercel
+sin «Related Projects»-funksjon, og med produksjonsdomenet lagt til backendens
+`allow_origins`.
+
+### Hvordan frontend finner backend i produksjon
+
+Frontenden velger adresse automatisk basert på om bygget er et utviklings- eller
+produksjonsbygg (`import.meta.env.DEV`), ikke en miljøvariabel som må settes manuelt:
+
+- **Lokalt** (`npm run dev`): kaller `http://127.0.0.1:8000` (backendens lokale adresse),
+  som i dag.
+- **I produksjon** (`npm run build`, kjørt av Vercel): kaller en relativ adresse
+  (f.eks. `/api/analyze/demo`), som Vercel ruter til backend-tjenesten på samme domene.
+
+`VITE_API_BASE_URL` finnes fortsatt som en eksplisitt overstyring (se
+`frontend/.env.example`), men er ikke nødvendig å sette i produksjon.
+
+### Miljøvariabler i produksjon
+
+API-nøkkelen og annen konfigurasjon settes som **Vercel Environment Variables** i
+Vercel-dashbordet (eller med `vercel env add`) – **aldri** i en fil som committes:
+
+| Variabel | Miljø | Nødvendig? |
+|---|---|---|
+| `OPENAI_API_KEY` | Production | Ja, for at normalmodus skal fungere i produksjon |
+| `OPENAI_MODEL` | Production | Nei – har standardverdi i koden (`gpt-5.4-mini`) |
+| `OPENAI_TIMEOUT_SECONDS` | Production | Nei – har standardverdi i koden (`30`) |
+
+**Anbefaling:** sett `OPENAI_API_KEY` kun på Production-miljøet, ikke på Preview.
+Da fungerer demomodus på alle forhåndsvisnings-URL-er, mens normalmodus der svarer med
+en tydelig 503-feilmelding ("ingen API-nøkkel") i stedet for å kunne bruke kreditter –
+akkurat slik applikasjonen allerede er designet til å håndtere en manglende nøkkel.
+
+### Hindre misbruk av API-kreditter
+
+Siden v1 bevisst ikke har innlogging, kan hvem som helst med lenken bruke normalmodus.
+Det viktigste forsvaret er **utenfor applikasjonskoden**: et forbrukstak/budsjettgrense
+satt direkte i OpenAI sin plattform. I tillegg bidrar eksisterende grenser i koden
+(`MAX_CV_LENGTH`/`MAX_JOB_AD_LENGTH`, 30 sekunders timeout, ingen automatiske retries)
+til å begrense kostnaden per enkeltkall.

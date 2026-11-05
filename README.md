@@ -10,7 +10,7 @@ Repoet inneholder gruppens applikasjon **Career Transition Assistant** og dokume
 
 ## Kjøre applikasjonen lokalt
 
-Applikasjonen består av en React/Vite-frontend (`frontend/`) og en FastAPI-backend (`backend/`), som kjøres som to separate prosesser. **Demomodus** bruker en fast, fiktiv CV og stillingsannonse fra [`test-data/`](test-data/) og krever ingen API-nøkkel. Backenden har nå også et **normalmodus**-endepunkt som bruker OpenAI (`gpt-5.4-mini`), men dette er foreløpig ikke koblet til frontend – det testes direkte mot backend-API-et (se under).
+Applikasjonen består av en React/Vite-frontend (`frontend/`) og en FastAPI-backend (`backend/`), som under lokal utvikling kjøres som to separate prosesser. **Demomodus** bruker en fast, fiktiv CV og stillingsannonse fra [`test-data/`](test-data/) og krever ingen API-nøkkel. **Normalmodus** sender din egen CV og stillingsannonse til en ekte språkmodell (OpenAI, `gpt-5.4-mini`) via backenden, og krever en API-nøkkel (se under).
 
 ### 1. Start backend
 
@@ -38,9 +38,9 @@ Frontenden kjører da på `http://localhost:5173` og er satt opp til å kalle ba
 
 Backenden tillater CORS-forespørsler fra `http://localhost:5173` og `http://127.0.0.1:5173` i lokal utvikling, slik at frontend og backend kan kjøre som separate prosesser uten CORS-feil.
 
-### 3. Bruk demomodus
+### 3. Bruk demo- eller normalmodus i grensesnittet
 
-Åpne `http://localhost:5173` i nettleseren, velg **Demomodus** (normalmodus er foreløpig ikke implementert) og trykk **«Kjør demoanalyse»**. Resultatet viser den fiktive CV-en og stillingsannonsen, sentrale krav, relevante styrker, kompetansegap, CV-forslag med sporbarhet til CV og stillingsannonse, og et redigerbart søknadsutkast.
+Åpne `http://localhost:5173` i nettleseren. Velg **Demomodus** og trykk **«Kjør demoanalyse»** for å se hovedflyten med fiktiv CV og stillingsannonse uten API-nøkkel, eller velg **Normalmodus**, lim inn din egen CV og stillingsannonse, og trykk **«Kjør analyse»**. Resultatet viser i begge tilfeller sentrale krav, relevante styrker, kompetansegap, CV-forslag med sporbarhet til CV og stillingsannonse, og et redigerbart søknadsutkast.
 
 ### 4. Test normalmodus direkte mot backend (uten frontend)
 
@@ -61,3 +61,29 @@ cd backend && uv run pytest
 
 cd frontend && npm test
 ```
+
+## Publisering på Vercel
+
+IBE160 bruker Vercel som offisiell publiseringsløsning. Repoet er forberedt for
+publisering med én **Vercel Services**-konfigurasjon i [`vercel.json`](vercel.json) i
+repo-roten, som lar frontend (`frontend/`) og backend (`backend/`) kjøre som to
+tjenester i **ett** Vercel-prosjekt, på samme domene: alt under `/api/*` rutes til
+FastAPI-backenden, resten rutes til React/Vite-frontenden. Se `architecture.md`
+avsnitt 10 for begrunnelse og alternativ løsning.
+
+Dette er foreløpig kun forberedt, ikke publisert – ingen Vercel-prosjekt er opprettet.
+
+### Manuelt i Vercel (når prosjektet opprettes)
+
+1. Koble repoet til Vercel via GitHub-integrasjonen (gjøres i Vercel-dashbordet).
+2. Sett miljøvariabelen `OPENAI_API_KEY` for **Production**-miljøet i Vercel sitt
+   dashbord (eller med `vercel env add`) – **aldri** i en fil som committes.
+   `OPENAI_MODEL` og `OPENAI_TIMEOUT_SECONDS` er valgfrie (har standardverdier i koden).
+3. Sett **ikke** `OPENAI_API_KEY` på Preview-miljøet – da fungerer demomodus på alle
+   forhåndsvisninger, mens normalmodus der gir en ren 503-feilmelding i stedet for å
+   kunne bruke API-kreditter.
+4. Sett et forbrukstak/budsjettgrense for API-nøkkelen direkte i OpenAI sin
+   plattform, før lenken deles med andre – dette er det viktigste forsvaret mot at
+   uvedkommende bruker opp kredittene, siden v1 ikke har innlogging.
+5. `VITE_API_BASE_URL` skal **ikke** settes i produksjon – frontend velger automatisk
+   en relativ adresse der.

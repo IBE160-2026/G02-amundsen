@@ -456,3 +456,45 @@ Career Transition Assistant fungerer nå ende-til-ende i nettleseren for begge m
 2. Den tidligere dokumenterte begrensningen i krav-koblinger (`related_requirement_ids` kan gå glipp av en reelt relevant, men annerledes formulert kobling) står fortsatt, akseptert som en v1-begrensning.
 3. Testingen er så langt gjort med ett testsett (en fiktiv CV og stillingsannonse) – bredere testing mot flere, varierte CV-er/stillinger er ikke gjort.
 4. Ingen automatisert test kan verifisere en ekte, levende OpenAI-respons – kvaliteten på KI-genererte resultater må fortsatt vurderes manuelt, slik PRD-en (avsnitt 7) forutsetter.
+
+
+## 05.11.2026 – Forberedelse av publisering på Vercel (fase 1)
+
+### Arbeid utført
+
+Etter at en publiseringsplan ble gjennomgått og godkjent (Vercel **Services** valgt som arkitektur – ett Vercel-prosjekt for frontend og backend, i stedet for to separate prosjekter), ble første fase av det konkrete oppsettet gjennomført. Ingen Vercel-prosjekt er opprettet, og ingen ekte OpenAI-kall er gjort.
+
+**Ny fil: `vercel.json` (repo-rot)**
+- Definerer `frontend/` og `backend/` som to Vercel Services.
+- Backend-tjenesten får `entrypoint: "app.main:app"`, som peker direkte på den eksisterende FastAPI-instansen i `backend/app/main.py` – ingen restrukturering av backend-koden var nødvendig.
+- To rewrite-regler: `/api/*` → backend-tjenesten, alt annet → frontend-tjenesten.
+- Konfigurasjonen er hentet fra og verifisert mot gjeldende offisiell Vercel-dokumentasjon (`/docs/services`, `/docs/services/routing`, `/docs/services/config-reference`), ikke gjettet.
+
+**Frontend: automatisk relativ adresse i produksjon**
+- `frontend/src/api/analyzeApi.js` endret slik at adressen til backend velges automatisk basert på om bygget er et utviklings- eller produksjonsbygg (`import.meta.env.DEV`), i stedet for å kreve at noen manuelt setter en miljøvariabel riktig i Vercel-dashbordet. Lokalt: `http://127.0.0.1:8000` (uendret). I et produksjonsbygg: en relativ adresse, som Vercel Services ruter til backend-tjenesten på samme domene.
+- Dette ble bevisst valgt fremfor en ren miljøvariabel-basert løsning, siden en glemt/feilsatt miljøvariabel ellers ville gitt en brutt produksjonsapplikasjon.
+- Bekreftet empirisk (ikke bare med enhetstest) ved å bygge frontend og søke i det ferdige bygget: ingen referanse til `127.0.0.1:8000` finnes i produksjonsbygget, mens den relative adressen `/api/analyze/demo` gjør.
+
+**Opprydding i `backend/pyproject.toml`**
+- Fjernet den ubrukte `[project.scripts] backend = "backend:main"`-resten fra `uv init` (pekte på en modul som aldri er brukt av selve applikasjonen). Bekreftet med `uv sync` og full testkjøring at dette ikke påvirker noe.
+
+**Dokumentasjon**
+- `architecture.md`: ny seksjon 10 "Deployment (Vercel)" – beskriver Services-arkitekturen, hvordan frontend finner backend i produksjon, nødvendige miljøvariabler, og hvordan man forhindrer misbruk av API-kreditter. `vercel.json` lagt til i filstruktur-oversikten (avsnitt 5).
+- `README.md`: rettet to utdaterte linjer som fortsatt sa at normalmodus ikke var koblet til frontend (dette ble gjort i en tidligere økt). Ny seksjon "Publisering på Vercel" med en konkret, nummerert sjekkliste for det som må gjøres manuelt i Vercel sitt dashbord.
+
+### Testing og kvalitetssikring
+
+- Backend: `uv run pytest -q` → **77 av 77 bestått** (uendret – oppryddingen i `pyproject.toml` påvirket ingen testresultater).
+- Frontend: `npx vitest run` → **23 av 23 bestått** (opp fra 21 – to nye tester for den DEV-avhengige adressevalget, pluss én test for eksplisitt overstyring via `VITE_API_BASE_URL`).
+- `npx eslint .` → ingen feil. `npx vite build` → bygget uten feil, og inspisert direkte for å bekrefte riktig adressevalg (se over).
+- Ingen ekte, betalte OpenAI-kall ble gjort.
+
+### KI-bruk og kritisk vurdering
+
+- Claude Code ble bedt om å hente og bruke *gjeldende* offisiell Vercel-dokumentasjon for `vercel.json`-skjemaet, i stedet for å basere konfigurasjonen på eldre eller antatt kunnskap – viktig siden Vercel sin Services-funksjon er relativt ny (beta).
+- Et forsøk på å teste produksjons-adressevalget med et vanlig mocket enhetstest (ved å stubbe `import.meta.env.DEV`/`PROD`) fungerte ikke som forventet, fordi Vite erstatter disse verdiene statisk ved bygging snarere enn å lese dem dynamisk. Claude Code identifiserte dette selv i stedet for å late som testen var gyldig, og verifiserte oppførselen empirisk ved å inspisere det faktiske produksjonsbygget i stedet.
+- Ingen Vercel-prosjekt ble opprettet og ingen kode ble pushet av Claude Code, i tråd med instruksjonene.
+
+### Status
+
+Repoet er klart for at et Vercel-prosjekt kan opprettes og kobles til. Gjenstår (manuelt, i Vercel): opprette prosjektet, sette `OPENAI_API_KEY` på Production-miljøet, sette et forbrukstak hos OpenAI, og gjennomføre første publisering.
