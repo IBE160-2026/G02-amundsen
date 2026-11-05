@@ -162,13 +162,12 @@ G02-amundsen/
 ├── backend/
 │   ├── app/
 │   ├── tests/
+│   ├── test-data/
+│   │   ├── demo-cv.txt
+│   │   ├── demo-job-ad.txt
+│   │   └── demo-result.json
 │   ├── pyproject.toml
 │   └── uv.lock
-│
-├── test-data/
-│   ├── demo-cv.txt
-│   ├── demo-job-ad.txt
-│   └── demo-result.json
 │
 ├── docs/
 │   ├── product-brief.md
@@ -323,6 +322,12 @@ Første versjon skal bevisst unngå funksjoner som krever permanent lagring av p
 
 IBE160 bruker Vercel som offisiell publiseringsløsning, og grupperepoene er tilknyttet
 Vercel-integrasjonen via GitHub.
+
+> **Merk:** `backend/test-data/` (avsnitt 5) ligger bevisst inne i `backend/`, ikke på
+> repo-roten. En Vercel Service bunter kun filer inne i sin egen `root`
+> (`backend/`), så demodata utenfor denne mappen følger ikke med i produksjon – dette
+> var årsaken til en reell feil ("Kunne ikke laste demodata") etter første
+> publisering.
 
 ### Ett Vercel-prosjekt med Services
 

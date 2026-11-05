@@ -5,9 +5,15 @@ et fast eksempelresultat med samme struktur som et ekte KI-svar, og skal ikke
 gjøre noen kall til en ekstern språkmodell (architecture.md, avsnitt
 "Demo Mode"; PRD FR12).
 
-Demodataene lagres som egne prosjektfiler i `test-data/` på rot-nivå i
-repoet, slik arkitekturdokumentet beskriver, i stedet for å være hardkodet i
-Python-koden.
+Demodataene lagres som egne prosjektfiler i `backend/test-data/`, i stedet
+for å være hardkodet i Python-koden. Filene ligger bevisst INNE i
+`backend/`, ikke på repo-roten: i produksjon kjører backenden som en egen
+Vercel Service med `backend/` som tjenestens rot (se `vercel.json`), og en
+slik Python-tjeneste bunter kun filer som faktisk ligger inne i rot-mappen.
+Filer utenfor (f.eks. en `test-data/` på repo-roten) følger ikke med i
+funksjonen som kjører i produksjon, og ga opphav til feilen "Kunne ikke
+laste demodata" etter publisering – demodata fungerte lokalt, men fantes
+ikke i det produksjonsbyggede funksjonen.
 """
 
 from __future__ import annotations
@@ -18,8 +24,10 @@ from pathlib import Path
 
 from .models import AnalysisResult, AnalyzeResponse
 
-# backend/app/demo_data.py -> parents[1] er "backend/", parents[2] er repo-roten.
-TEST_DATA_DIR = Path(__file__).resolve().parents[2] / "test-data"
+# backend/app/demo_data.py -> parents[0] er "app/", parents[1] er "backend/".
+# Må IKKE gå lenger ut (f.eks. parents[2] til repo-roten) – se docstringen
+# over for hvorfor.
+TEST_DATA_DIR = Path(__file__).resolve().parents[1] / "test-data"
 
 DEMO_CV_PATH = TEST_DATA_DIR / "demo-cv.txt"
 DEMO_JOB_AD_PATH = TEST_DATA_DIR / "demo-job-ad.txt"

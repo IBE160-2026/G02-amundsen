@@ -10,7 +10,7 @@ Repoet inneholder gruppens applikasjon **Career Transition Assistant** og dokume
 
 ## Kjøre applikasjonen lokalt
 
-Applikasjonen består av en React/Vite-frontend (`frontend/`) og en FastAPI-backend (`backend/`), som under lokal utvikling kjøres som to separate prosesser. **Demomodus** bruker en fast, fiktiv CV og stillingsannonse fra [`test-data/`](test-data/) og krever ingen API-nøkkel. **Normalmodus** sender din egen CV og stillingsannonse til en ekte språkmodell (OpenAI, `gpt-5.4-mini`) via backenden, og krever en API-nøkkel (se under).
+Applikasjonen består av en React/Vite-frontend (`frontend/`) og en FastAPI-backend (`backend/`), som under lokal utvikling kjøres som to separate prosesser. **Demomodus** bruker en fast, fiktiv CV og stillingsannonse fra [`backend/test-data/`](backend/test-data/) og krever ingen API-nøkkel. **Normalmodus** sender din egen CV og stillingsannonse til en ekte språkmodell (OpenAI, `gpt-5.4-mini`) via backenden, og krever en API-nøkkel (se under).
 
 ### 1. Start backend
 

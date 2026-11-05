@@ -498,3 +498,77 @@ Etter at en publiseringsplan ble gjennomgått og godkjent (Vercel **Services** v
 ### Status
 
 Repoet er klart for at et Vercel-prosjekt kan opprettes og kobles til. Gjenstår (manuelt, i Vercel): opprette prosjektet, sette `OPENAI_API_KEY` på Production-miljøet, sette et forbrukstak hos OpenAI, og gjennomføre første publisering.
+
+
+## 05.11.2026 – Feil i demomodus etter publisering på Vercel
+
+### Feilen
+
+Career Transition Assistant ble publisert på `https://g02-amundsen.vercel.app/` – selve
+publiseringen var vellykket, og React-frontenden lastet riktig. Men et klikk på
+«Kjør demoanalyse» ga feilmeldingen:
+
+> "Kunne ikke laste demodata. Kontroller at test-data-filene finnes."
+
+Demomodus fungerte uten problemer lokalt før publisering.
+
+### Undersøkelse og årsak
+
+Backenden leser demodata (fiktiv CV, stillingsannonse og eksempelresultat) fra disk i
+`app/demo_data.py`, via en sti beregnet relativt til modulfilen
+(`Path(__file__).resolve().parents[N] / "test-data"`). Filene selv lå i en `test-data/`-mappe
+på **repo-roten**, altså utenfor `backend/`.
+
+Årsaken ble bekreftet mot gjeldende Vercel-dokumentasjon (ikke gjettet): en Vercel
+Service bygges og bunter **kun** filer som ligger inne i tjenestens egen `root`
+(`backend/`, se `vercel.json`). En sti som peker utenfor denne mappen – som den
+gamle `../test-data/` – finnes rett og slett ikke i det produksjonsbyggede
+funksjonsmiljøet, selv om den fungerer helt fint lokalt (der hele repoet ligger samlet
+på disk). Det er nøyaktig dette som ga `FileNotFoundError` → feilmeldingen over.
+
+### Løsningen
+
+Minst mulig endring som løser problemet fullt ut:
+
+- Flyttet `test-data/` fra repo-roten til **`backend/test-data/`** (med `git mv`, for å
+  bevare filhistorikken).
+- Endret `TEST_DATA_DIR` i `app/demo_data.py` til å peke på `backend/test-data/` i stedet
+  for repo-roten (én linje).
+- Oppdaterte prosjektstruktur-oversikten i `architecture.md` og lenken i `README.md`
+  til den nye plasseringen, samt la til en kort forklaring i `architecture.md` sin
+  publiseringsseksjon om hvorfor demodata må ligge inne i `backend/`.
+- La til en ny test (`test_test_data_dir_is_inside_backend_service_root`) som
+  kontrollerer at demodata-mappen faktisk ligger inne i `backend/` – denne ville fanget
+  opp akkurat denne feilen før publisering, i motsetning til de eksisterende testene
+  (som alltid kjører lokalt, der hele repoet er tilgjengelig uansett).
+- Ingen endring i selve demodataene, API-et, eller frontend – kun hvor filene bor og
+  hvordan backenden finner dem.
+
+### Testing og kvalitetssikring
+
+- Backend: `uv run pytest -q` → **78 av 78 bestått** (opp fra 77 – én ny, målrettet
+  regresjonstest).
+- Frontend: `npx vitest run` → **23 av 23 bestått** (uendret – ingen frontend-kode
+  påvirket).
+- `npx eslint .` → ingen feil. `npx vite build` → bygget uten feil.
+- Manuell smoke-test lokalt: startet backenden på nytt og bekreftet at
+  `GET /api/analyze/demo` fortsatt svarer korrekt med den fiktive CV-en fra den nye
+  plasseringen.
+- Ingen ekte, betalte OpenAI-kall ble gjort.
+
+### KI-bruk og kritisk vurdering
+
+- Claude Code ble bedt om å fastslå den konkrete årsaken før noe ble endret, og gjorde
+  dette ved å lese Vercel sin dokumentasjon om fil-bunting for Python-tjenester, i
+  stedet for å gjette basert på feilmeldingens ordlyd alene.
+- Løsningen (flytte datamappen inn i tjenesten) retter selve rotårsaken direkte, i
+  stedet for en omvei (f.eks. en kopieringsscript i byggetrinnet), i tråd med ønsket
+  om minst mulig, men korrekt, endring.
+- Den nye testen er bevisst utformet for å fange opp nettopp denne feilklassen på
+  nytt (data flyttet ut av tjenesten igjen), ikke bare at dagens filer finnes.
+
+### Status
+
+Feilen er rettet lokalt og dekket av en ny test. Gjenstår: publisere denne endringen på
+nytt til det eksisterende Vercel-prosjektet (ingen nytt prosjekt opprettes), og bekrefte
+at demomodus fungerer i produksjon etterpå.
