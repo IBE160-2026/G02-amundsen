@@ -75,26 +75,35 @@ under `/api/*` rutes til FastAPI-backenden, resten rutes til React/Vite-frontend
 
 ### Status i produksjon
 
-- **Demomodus fungerer** på den publiserte siden, uten API-nøkkel – bekreftet manuelt i
-  nettleseren.
-- **Normalmodus er ikke aktivert i produksjon.** `OPENAI_API_KEY` er bevisst **ikke**
-  lagt inn i Vercel, for å unngå at en offentlig, uinnlogget side kan bruke opp
-  forhåndsbetalte OpenAI-kreditter før gruppen har satt et forbrukstak. Et besøk i
-  normalmodus på den publiserte siden gir derfor en ren 503-feilmelding
+- **Demomodus fungerer offentlig** på den publiserte siden, uten API-nøkkel –
+  bekreftet manuelt i nettleseren.
+- **Normalmodus er ikke tilgjengelig i den nåværende produksjonskonfigurasjonen.**
+  Normalmodus **ble** testet med ekte OpenAI-analyse direkte i produksjon
+  06.11.2026, under kontrollerte forhold (redusert forbrukstak og hard grense satt
+  hos OpenAI først) – analysen fungerte, og resultatet ble vist korrekt i
+  nettleseren (se `process-log.md`). `OPENAI_API_KEY` ble deretter **bevisst fjernet**
+  fra Vercel igjen etter testen, for å unngå at en offentlig, uinnlogget side kan
+  brukes av uvedkommende til å tømme forhåndsbetalte OpenAI-kreditter over tid. Et
+  besøk i normalmodus på den publiserte siden gir derfor nå en ren 503-feilmelding
   ("ingen gyldig API-nøkkel"), ikke en krasj.
 - For å teste normalmodus med ekte KI-analyse akkurat nå: kjør applikasjonen **lokalt**
   med din egen `OPENAI_API_KEY` (se "Kjøre applikasjonen lokalt" over).
+- **Kjent, åpent sikkerhetspunkt:** nøkkelen som ble brukt i produksjonstesten er ikke
+  tilbakekalt hos OpenAI. Eldre Vercel-deployments kan i prinsippet fortsatt ha tilgang
+  til den, selv om den er fjernet fra gjeldende miljøkonfigurasjon. Se `issues.md`.
 
-### Manuelt i Vercel (gjenstår før normalmodus kan aktiveres i produksjon)
+### Manuelt i Vercel (for å aktivere normalmodus i produksjon på nytt)
 
-1. Sett et forbrukstak/budsjettgrense for API-nøkkelen direkte i OpenAI sin plattform –
-   dette er det viktigste forsvaret mot at uvedkommende bruker opp kredittene, siden v1
-   ikke har innlogging.
-2. Sett deretter miljøvariabelen `OPENAI_API_KEY` for **Production**-miljøet i Vercel
+1. **Tilbakekall/roter den tidligere brukte API-nøkkelen hos OpenAI først** (se
+   sikkerhetspunktet over), før en eventuell ny nøkkel settes opp.
+2. Sett et forbrukstak/budsjettgrense for den nye nøkkelen direkte i OpenAI sin
+   plattform – dette er det viktigste forsvaret mot at uvedkommende bruker opp
+   kredittene, siden v1 ikke har innlogging.
+3. Sett deretter miljøvariabelen `OPENAI_API_KEY` for **Production**-miljøet i Vercel
    sitt dashbord (eller med `vercel env add`) – **aldri** i en fil som committes.
    `OPENAI_MODEL` og `OPENAI_TIMEOUT_SECONDS` er valgfrie (har standardverdier i koden).
-3. Sett **ikke** `OPENAI_API_KEY` på Preview-miljøet – da fortsetter demomodus å
+4. Sett **ikke** `OPENAI_API_KEY` på Preview-miljøet – da fortsetter demomodus å
    fungere på alle forhåndsvisninger, mens normalmodus der gir en ren 503-feilmelding
    i stedet for å kunne bruke API-kreditter.
-4. `VITE_API_BASE_URL` skal **ikke** settes i produksjon – frontend velger automatisk
+5. `VITE_API_BASE_URL` skal **ikke** settes i produksjon – frontend velger automatisk
    en relativ adresse der.

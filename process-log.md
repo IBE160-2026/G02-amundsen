@@ -633,3 +633,93 @@ mot den publiserte applikasjonen var derfor nødvendig, ikke bare en formalitet.
    normalmodus i produksjon.
 3. Gjøre én bevisst, villet ekte testforespørsel mot normalmodus i produksjon etterpå,
    for å bekrefte hele kjeden der.
+
+
+## 06.11.2026 – Kontrollert produksjonstest av normalmodus med ekte OpenAI
+
+### Forberedelser hos OpenAI (sikkerhetstiltak før testen)
+
+- API-saldoen før testen var **$4,98**.
+- Automatisk påfyll av saldo var deaktivert.
+- Organisasjonens månedlige forbruksgrense ble redusert fra $100 til **$3**, for å
+  begrense det maksimale tapet dersom noe skulle gå galt under den korte perioden
+  nøkkelen var aktiv i produksjon.
+- "Enforce a hard limit" ble aktivert og bekreftet hos OpenAI.
+- OpenAI advarer selv om at grensen i praksis kan overskrides litt (håndheving av
+  harde grenser er ikke alltid helt eksakt i sanntid) – dette ble tatt til
+  etterretning som en kjent, akseptert restrisiko for denne korte, kontrollerte
+  testen.
+
+### Gjennomføring i Vercel
+
+1. `OPENAI_API_KEY` ble lagt inn i Vercel som en **Secret**, kun for
+   **Production**-miljøet.
+2. En ny produksjonspublisering ble gjort og fikk status **Ready**.
+3. Normalmodus ble testet direkte på **https://g02-amundsen.vercel.app/**, med en
+   fiktiv CV og stillingsannonse (se testresultat under). Analysen fungerte, og
+   resultatet ble vist korrekt i nettleseren.
+4. Umiddelbart etter testen ble `OPENAI_API_KEY` **slettet** fra Vercel igjen.
+5. En ny publisering uten den konfigurerte nøkkelen ble gjort, og fikk status
+   **Ready** og **Current** – normalmodus er dermed deaktivert i produksjon igjen,
+   på samme måte som før testen.
+
+### Kjent, åpen sikkerhetsrisiko
+
+Den opprinnelige OpenAI API-nøkkelen som ble brukt i testen er **ikke tilbakekalt
+(revoked)** hos OpenAI. Selv om nøkkelen er fjernet fra det nåværende Vercel-miljøet,
+kan **eldre Vercel-deployments** (tidligere bygg som ble laget mens nøkkelen var
+konfigurert) i prinsippet fortsatt ha tilgang til den, siden miljøvariabler i Vercel
+er bakt inn i det enkelte bygget på byggetidspunktet. Dette er en reell, uløst
+sikkerhetsrisiko, og føres som et eget, åpent punkt (se `issues.md`). Risikoen
+reduseres i praksis av det lave forbrukstaket ($3) og at auto-påfyll er deaktivert,
+men den fjernes ikke før nøkkelen faktisk tilbakekalles/roteres hos OpenAI.
+
+### Testresultat
+
+**Fiktiv kandidat:** Emma Hansen. **Fiktiv arbeidsgiver:** Fjord Analyse AS.
+**Stilling:** Junior analytiker.
+
+Resultatet fra den ekte analysen inneholdt:
+- 6 identifiserte stillingskrav
+- 5 relevante styrker
+- 5 kompetansegap
+- 4 forslag til CV-tilpasning
+- Et generert søknadsutkast
+
+**Kvalitetskontroll:**
+- Bachelorgrad og Excel-erfaring ble riktig identifisert som dokumenterte styrker.
+- SQL og Power BI ble korrekt vurdert som **ikke** dokumenterte ferdigheter
+  (kompetansegap) – samme korrekte oppførsel som ble bekreftet i de tidligere, lokale
+  testrundene (05.11.2026).
+- Styrkene hadde relevante, sporbare kildeutdrag.
+- Søknadsutkastet diktet ikke opp SQL- eller Power BI-erfaring – ingen oppdiktede
+  kvalifikasjoner ble funnet (FR10 holder).
+
+**To mindre kvalitetsbegrensninger:**
+1. En språklig feil i resultatet (en seksjon ble omtalt som "språkendelig seksjon" –
+   et uklart/feilformulert uttrykk fra språkmodellen).
+2. Søknadsutkastet var igjen ganske generelt formulert – samme kjente begrensning som
+   ble notert etter den lokale ende-til-ende-testen 05.11.2026, nå bekreftet å gjelde
+   også i produksjon.
+
+### Kritisk refleksjon
+
+Denne testen bekrefter at hele den ekte kjeden – frontend på Vercel → Services-ruting
+→ FastAPI-backend → OpenAI → grunnlagskontroll → visning i nettleseren – fungerer i en
+reell produksjonsplattform, ikke bare lokalt. Samtidig viser testen at det å aktivere
+en ekte, betalt integrasjon midlertidig i produksjon introduserer en ny type risiko
+som ikke fantes mens nøkkelen kun lå lokalt: en API-nøkkel som har vært konfigurert i
+et Vercel-miljø kan leve videre i tidligere bygg selv etter at den er fjernet fra
+gjeldende konfigurasjon. Å fjerne en miljøvariabel er derfor ikke det samme som å
+trekke tilbake tilgangen til den – kun selve nøkkelen (hos leverandøren) kan gjøre
+det. Lærdommen tas med videre: en "slett nøkkelen fra Vercel"-rutine er ikke
+tilstrekkelig i seg selv for å stenge tilgangen fullstendig; en fullverdig
+sikkerhetsrutine må inkludere at nøkkelen tilbakekalles/roteres hos leverandøren når
+en midlertidig eksponering avsluttes.
+
+### Status
+
+Normalmodus er bekreftet fungerende i produksjon gjennom en kontrollert, tidsavgrenset
+test, men er **deaktivert** igjen i den nåværende produksjonskonfigurasjonen. Den
+opprinnelige nøkkelen står fortsatt som et åpent, dokumentert sikkerhetspunkt til den
+tilbakekalles hos OpenAI.
