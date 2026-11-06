@@ -1159,3 +1159,127 @@ begrunnes med:
   for "kundeservice/opplæring" vs. "kommunikasjonsevner", akseptert
   05.11.2026) – ikke en skjult mangel, men en bevisst grense for hva v1
   leverer, synlig for både bruker og sensor i README, `issues.md` og her.
+
+## 06.11.2026 – Manuell mobiltest av den publiserte applikasjonen
+
+### Gjennomføring
+
+Den publiserte applikasjonen (`https://g02-amundsen.vercel.app/`) ble åpnet i
+Google Chrome, og mobilvisning ble simulert i Chrome DevTools ved 375 px
+bredde (sammenlignbart med en vanlig smarttelefonskjerm).
+
+### Observasjoner
+
+- Startsiden, modusvalgene og forklaringene fremsto lesbare og tilpasset
+  bredden.
+- Demomodus ble kjørt og produserte analyseresultater.
+- Resultatkort, kompetansegap, CV-forslag og søknadsutkast ble undersøkt
+  visuelt.
+- Søknadsutkastet var synlig i et redigerbart tekstfelt.
+- Det ble ikke observert åpenbare overlapp eller avkuttet tekst i de
+  kontrollerte områdene.
+
+### Begrensninger ved denne testen
+
+- Ingen full WCAG-kontrastmåling er utført.
+- Ikke alle skjermstørrelser eller faktiske mobilenheter er testet – kun
+  DevTools-simulering ved én bredde (375 px) i én nettleser.
+- Ingen fullstendig skjermlesertest er utført.
+- Normalmodus ble ikke testet i mobilvisning i denne runden (kun demomodus),
+  siden normalmodus ikke er offentlig aktivert i produksjon (se tidligere
+  seksjon "Vellykket publisering bekreftet, normalmodus bevisst holdt av i
+  produksjon" og README).
+
+Det skal ikke påstås at noe utover dette faktisk er testet.
+
+## 06.11.2026 – Sluttstatus for applikasjonsdelen
+
+Dette er den avsluttende statusen for Career Transition Assistant ved
+slutten av applikasjonsdelen (70 %) av IBE160-prosjektet.
+
+### Hva som faktisk er implementert
+
+Alle funksjonelle krav FR1–FR12 og ikke-funksjonelle krav NFR1–NFR8 i
+`prd.md` er implementert: innliming av CV og stillingsannonse som tekst,
+analyse mot stillingskrav, identifisering av styrker og kompetansegap,
+konkrete CV-forslag med sporbarhet til CV og/eller stillingsannonse, et
+redigerbart førsteutkast til søknadsbrev, en demomodus uten API-nøkkel, og
+en normalmodus mot en ekte språkmodell (OpenAI). Ingen lagring av CV,
+stillingsannonse, analyse eller søknadsutkast skjer noe sted i koden.
+Scope-grensene fra `product-brief.md`/`prd.md` ("Out for v1") er
+respektert – ingen funksjon utenfor avgrenset scope er lagt til.
+
+### Hvordan sensor kan teste løsningen
+
+Se README.md, avsnittene "Forutsetninger" og "Kjøre applikasjonen lokalt":
+demomodus (punkt 3) krever ingen API-nøkkel eller kostnad og kan testes
+direkte, både lokalt og på den publiserte siden
+(`https://g02-amundsen.vercel.app/`). Normalmodus (punkt 4) krever en egen
+`OPENAI_API_KEY` i `backend/.env` og kan kun testes lokalt, siden den
+bevisst ikke er aktivert i produksjon (se eget punkt under).
+
+### Hva kvalitetssikringen har bekreftet
+
+- Automatisert testsuite: backend **85/85 bestått** (`uv run pytest`),
+  frontend **23/23 bestått** (`npm test`), begge kjørt på nytt og bekreftet
+  i forbindelse med denne sluttkontrollen.
+- `npm run lint` (ESLint): ingen feil.
+- `npm run build` (produksjonsbygg): bygger uten feil.
+- Fire fiktive, forhåndsdefinerte testsett (`backend/test-data/manual-qa/`)
+  er kjørt mot ekte OpenAI-svar og vurdert mot forhåndsdefinerte
+  forventninger.
+- Tre reelle tester av normalmodus mot samme anonymiserte CV og
+  Statnett-stillingsannonse (se de tre seksjonene over) har gradvis avdekket
+  og rettet konkrete feil i grunnlagskontrollen (`grounding.py`), bekreftet
+  med fail-before/pass-after-regresjonstester for hver av dem.
+- En avgrenset manuell mobiltest (se forrige seksjon) fant ingen åpenbare
+  visningsfeil i demomodus ved 375 px bredde, med de begrensningene som er
+  dokumentert der.
+
+### Kjente begrensninger som gjenstår
+
+- **Kompetansegap for sammensatte, tekniske krav identifiseres ikke
+  fullstendig.** Over tre reelle tester har analysen konsekvent fanget opp
+  mastergrad-kravet som gap, men ikke alltid de øvrige, mer spesifikke
+  tekniske kompetansene i samme stillingsannonse. Dette er IKKE løst, og
+  skal ikke fremstilles som løst – se forrige seksjon for beslutningen om
+  å avslutte videre promptjustering på dette punktet.
+- Nøkkelord-heuristikken i `grounding.py` kan i noen tilfeller fjerne en
+  reelt relevant, men annerledes formulert krav-kobling (akseptert
+  begrensning, se `app/grounding.py` og `issues.md`).
+- Normalmodus er ikke offentlig aktivert i produksjon på Vercel: v1 har
+  ingen innlogging, og uten tilgangskontroll kan en offentlig, uinnlogget
+  normalmodus i prinsippet brukes av uvedkommende til å tømme
+  forhåndsbetalte OpenAI-kreditter. Se README, avsnittet "Publisering på
+  Vercel", for full begrunnelse og status på API-nøkkelen som ble brukt i
+  en tidligere, kontrollert produksjonstest.
+- Mobilvisning er kun avgrenset manuelt testet (se forrige seksjon) – ingen
+  WCAG-kontrastmåling, ingen test på faktiske mobilenheter, ingen
+  skjermlesertest.
+- Mindre, allerede dokumenterte kvalitetsfunn fra manuell QA (se
+  `issues.md`) er aksepterte v1-begrensninger, ikke rettet.
+
+### Hvorfor videre funksjonsutvikling bevisst er avsluttet
+
+Som dokumentert i seksjonen "Tredje reelle Statnett-test" over:
+kjernefunksjonaliteten fungerer og er testet, de kjente begrensningene er
+forstått og dokumentert i stedet for oversett, og videre promptjustering
+har over tre reelle tester IKKE dokumentert sikker effekt på det
+gjenværende hovedfunnet (kompetansegap for sammensatte krav). Å fortsette å
+justere prompten ytterligere uten en ny arbeidshypotese vurderes som lav
+sannsynlighet for å lønne seg innenfor gjenværende prosjekttid, og risikerer
+å introdusere nye, utestede regresjoner. Dette er en bevisst, begrunnet
+beslutning – ikke en konsekvens av tidsnød alene.
+
+### Refleksjonsrapporten
+
+Refleksjonsrapporten er en separat del av eksamensarbeidet, utenfor denne
+loggen og utenfor applikasjonsdelen (70 %) som denne sluttstatusen gjelder.
+
+### Avsluttende presisering
+
+Denne sluttstatusen påstår ikke at løsningen er feilfri, eller at alle
+kompetansegap identifiseres korrekt. Den beskriver hva som faktisk er
+implementert og verifisert, og hvilke konkrete, kjente begrensninger som
+gjenstår – i tråd med prosjektets gjennomgående prinsipp om å dokumentere
+reelle funn i stedet for en kunstig positiv fremstilling.
