@@ -31,6 +31,29 @@ Regel 9 og 10 under er lagt til spesifikt for disse to funnene. De er, i
 motsetning til reglene over, IKKE verifisert mot et nytt, ekte OpenAI-kall i
 denne økten (ingen nye API-kall ble gjort) – om de faktisk endrer modellens
 oppførsel kan derfor ikke garanteres før en ny, reell test er kjørt.
+
+En OPPFØLGENDE reell brukertest (samme dag, samme anonymiserte CV og
+Statnett-annonse, ETTER at regel 9 og 10 over var lagt til) viste at det
+sammensatte IT-kravet fortsatt ikke ble fanget opp som et eget
+kompetansegap – kun mastergrad-kravet ble det. Siden rå-modellsvar ikke
+logges (NFR3), kan ikke den eksakte årsaken bekreftes, men den mest
+nærliggende, direkte observerbare forklaringen er at et (svakt, feilkoblet)
+CV-forslag samtidig ble koblet til nøyaktig dette kravet (se det tilhørende
+funnet i `grounding.py` sin docstring) – hvis modellen "ser" kravet som
+adressert av ET funn, uansett hvor svakt, er det nærliggende at den ikke
+også oppretter et eget kompetansegap for det. Regel 9 sa at hver NAVNGITTE
+del av et sammensatt krav skal vurderes for seg, men sa ikke eksplisitt at
+dette gjelder UAVHENGIG av om kravet allerede har en (svak) kobling et annet
+sted i resultatet. Regel 9 er derfor omskrevet til å være mer konkret
+(bryt kravet ned i de navngitte delene, vurder hver del for seg), og en ny
+regel 11 sier eksplisitt at en svak kobling ikke fritar fra plikten til å
+opprette et eget gap. Samme brukertest viste også at en generell egenskap
+(å kombinere fulltidsjobb og studier) ble brukt som "bevis" på at relevant
+erfaring kunne kompensere for mastergrad-kravet – en ny regel 12 presiserer
+at kompenserende erfaring må være relevant for kravets eget fagområde, ikke
+bare generell arbeidsevne. Heller ikke disse presiseringene (9 omskrevet,
+11 og 12 nye) er verifisert mot et nytt, ekte OpenAI-kall – samme forbehold
+som over gjelder.
 """
 
 from __future__ import annotations
@@ -68,18 +91,29 @@ står i CV-en. Hvis forslaget er å legge til en kompetanse som IKKE finnes i CV
 "vurder å nevne Power BI hvis du har brukt det"), skal `cv_excerpt` være `null`, og \
 forslaget selv skal formuleres betinget ("hvis du har ...", "dersom du har erfaring med \
 ...") i stedet for å late som kompetansen allerede er dokumentert.
-9. Vurder hvert krav i `job_requirements` for seg selv. Hvis stillingsannonsen nevner \
-flere konkrete, ulike kompetanser i samme krav eller samme setning (f.eks. "IT-kostnads- \
-modeller, lisensforvaltning og analyse av store datamengder"), og CV-en ikke tydelig \
-dekker én eller flere av disse spesifikt, skal den/de udokumenterte delen(e) beskrives \
-som et eget, konkret kompetansegap. Utelat ALDRI en spesifikk, udokumentert del bare \
-fordi en annen del av samme krav er dekket, og dekk den aldri vagt av en styrke om noe \
-annet.
+9. Hvis stillingsannonsen nevner flere konkrete, ulike kompetanser i samme krav eller \
+samme setning (f.eks. "IT-kostnadsmodeller, lisensforvaltning og analyse av store \
+datamengder"), bryt kravet ned i de navngitte delene, og vurder HVER del hver for seg: \
+dekker CV-en akkurat denne ene delen tydelig? Hvis ikke, skal nettopp den delen beskrives \
+som et eget, konkret kompetansegap – ikke en vag, samlet vurdering av hele kravet. \
+Utelat ALDRI en spesifikk, udokumentert del bare fordi en annen del av samme krav er \
+dekket, og dekk den aldri vagt av en styrke om noe annet.
 10. Hvis stillingsannonsen selv sier at et krav kan kompenseres av annen relevant \
 erfaring (f.eks. "relevant erfaring kan kompensere for manglende mastergrad"), MÅ du ta \
 med denne nyansen i kravets `description` i `job_requirements`, og i beskrivelsen av et \
 eventuelt tilhørende kompetansegap. Fremstill aldri et slikt krav som absolutt eller \
 ufravikelig når annonsen selv åpner for et unntak.
+11. En svak eller indirekte kobling (`related_requirement_ids`) mellom et krav og en \
+styrke eller et CV-forslag FRITAR deg ALDRI fra plikten i regel 9. Et krav kan ha BÅDE en \
+relatert styrke/CV-forslag OG et eget kompetansegap samtidig, hvis ulike, navngitte deler \
+av kravet er ulikt dokumentert. Bruk aldri en generell personlig egenskap (f.eks. stor \
+arbeidskapasitet, evne til å håndtere flere oppgaver, eller det å kombinere jobb og \
+studier) som bevis på at et SPESIFIKT, fagspesifikt krav er dekket.
+12. Hvis du nevner at relevant erfaring kan kompensere for et krav (regel 10), skal du \
+ALDRI hevde at en generell, udokumentert egenskap (f.eks. å kombinere jobb og studier, \
+eller stor arbeidskapasitet) i seg selv utgjør denne kompenserende erfaringen. \
+Kompenserende erfaring må være relevant for kravets EGET fagområde – ikke bare generell \
+arbeidsevne eller tidsstyring.
 """
 
 

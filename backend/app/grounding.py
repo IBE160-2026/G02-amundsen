@@ -126,6 +126,19 @@ Disse er nå lagt til i `_GENERIC_WORDS`, i tråd med hvordan "erfaring",
 type (akseptert) begrensning som beskrevet over: en ren nøkkelord-heuristikk
 kan aldri garantere at ALLE slike svake koblinger fanges opp, bare at de
 konkret identifiserte tilfellene gjør det.
+
+En påfølgende reell brukertest (samme dag, samme anonymiserte CV og
+Statnett-annonse, etter rettingen over) viste at den samme feilfamilien også
+fantes i CV-forslag (`CvSuggestion`), ikke bare i styrker: et forslag om å
+fremheve "erfaring med å kombinere fulltidsjobb og studier" ble koblet til
+et spesifikt krav om "analyse av store datamengder". Årsaken var denne
+gangen ikke et generisk ord, men at forslagets EGEN fritekst (`suggestion`)
+selv nevnte kravets spesifikke fagord for å begrunne forslaget – akkurat
+den samme svakheten som gjorde at `job_ad_excerpt` ble fjernet fra
+sammenligningsgrunnlaget i en tidligere runde (se `_filter_related_requirement_ids`
+sin docstring). Fiksen er derfor den samme typen presisering, nå utvidet
+til CV-forslag spesifikt: kun det CV-forankrede `cv_excerpt` kan bekrefte en
+krav-kobling for et CV-forslag – forslagets egen fritekst teller ikke.
 """
 
 from __future__ import annotations
@@ -263,13 +276,35 @@ def _filter_related_requirement_ids(
     Jira/Trello-krav fordi styrkens `job_ad_excerpt` var satt til nøyaktig
     kravets egen beskrivelsestekst – kravet "delte nøkkelord" med seg selv.
     Det er derfor kun funnets egen påstand og dets faktiske CV-dokumentasjon
-    (`cv_excerpt`) som avgjør om en krav-kobling er reell."""
+    (`cv_excerpt`) som avgjør om en krav-kobling er reell.
 
-    own_text = " ".join(
-        part
-        for part in (_own_claim_text(item), cleaned_source.cv_excerpt or "")
-        if part
-    )
+    For CV-forslag (`CvSuggestion`) spesifikt er funnets EGEN fritekst
+    (`suggestion`) bevisst IKKE med i sammenligningsgrunnlaget her, av samme
+    grunn som `job_ad_excerpt` ble fjernet over: et forslag begrunner ofte
+    seg selv med stillingsannonsens egne, spesifikke fagord ("... siden
+    stillingen krever analyse av store datamengder"), uavhengig av om selve
+    CV-innholdet forslaget peker på faktisk har noe med det fagordet å gjøre.
+    En oppfølgende reell brukertest (06.11.2026, anonymisert CV mot en
+    Statnett-annonse, se `process-log.md`) viste nøyaktig dette: et forslag
+    om å fremheve "å kombinere fulltidsjobb og studier" ble koblet til et
+    krav om "analyse av store datamengder" fordi FORSLAGSTEKSTEN selv nevnte
+    dette fagordet, ikke fordi CV-sitatet hadde noe med dataanalyse å gjøre.
+    For CV-forslag er det derfor kun `cv_excerpt` (det faktisk CV-forankrede
+    sitatet, om det finnes) som kan bekrefte en krav-kobling – uten et
+    relevant `cv_excerpt` beholdes ingen krav-kobling. Styrker og
+    kompetansegap er IKKE endret av denne presiseringen: et kompetansegap
+    har aldri noe `cv_excerpt` (per definisjon), så dets egen `description`
+    må fortsatt kunne brukes, og ingen tilsvarende feil er funnet for
+    styrker denne runden."""
+
+    if isinstance(item, CvSuggestion):
+        own_text = cleaned_source.cv_excerpt or ""
+    else:
+        own_text = " ".join(
+            part
+            for part in (_own_claim_text(item), cleaned_source.cv_excerpt or "")
+            if part
+        )
 
     return [
         req_id

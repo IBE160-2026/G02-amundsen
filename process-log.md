@@ -946,3 +946,115 @@ med målrettede, begrunnede promptendringer, men virkningen av disse er
 ubekreftet til en ny, reell KI-test er kjørt. Ingen eksisterende
 funksjonalitet eller sporbarhet er endret – kun `_GENERIC_WORDS` og
 systemprompten er utvidet.
+
+## 06.11.2026 – Oppfølgende reell brukertest: samme CV/annonse, etter forrige retting
+
+### Gjennomføringen
+
+Brukeren testet lokal normalmodus på nytt med samme anonymiserte CV og
+Statnett-annonse som i forrige runde, nå etter forrige kvalitetsforbedring.
+Den tidligere feilaktige koblingen mellom generell arbeidskapasitet og
+IT-økonomistyring under «Relevante styrker» var borte – den rettingen
+fungerte altså i et ekte, nytt svar, ikke bare i regresjonstesten. Tre nye
+svakheter ble funnet:
+
+1. Under «Forslag til CV-tilpasning» ble erfaring med å kombinere
+   fulltidsjobb og studier koblet til kravet om analyse av store
+   datamengder – en faglig ikke-holdbar kobling.
+2. Analysen viste fortsatt bare manglende mastergrad som kompetansegap,
+   selv om CV-en heller ikke dokumenterte erfaring med IT-controlling,
+   lisensforvaltning, IT-kostnadsmodeller eller analyse av store
+   datamengder.
+3. Erfaring med fulltidsjobb og studier ble koblet til muligheten for at
+   relevant erfaring kan kompensere for mastergrad – også en svak kobling.
+
+### Undersøkelse og årsak
+
+**Funn 1** er samme feilfamilie som tidligere, nå i CV-forslag
+(`CvSuggestion`) i stedet for styrker. Årsaken ble bekreftet i koden: i
+`_filter_related_requirement_ids` (`backend/app/grounding.py`) inkluderte
+sammenligningsgrunnlaget forslagets EGEN fritekst (`suggestion`-feltet).
+Et forslag begrunner ofte seg selv med stillingsannonsens egne, spesifikke
+fagord («... siden stillingen krever analyse av store datamengder»), helt
+uavhengig av om det faktiske CV-innholdet forslaget peker på har noe med
+dette å gjøre – samme grunnleggende svakhet som gjorde at `job_ad_excerpt`
+ble fjernet fra grunnlaget i en tidligere runde, nå i et nytt felt.
+
+**Funn 2** kan ikke rettes i `grounding.py` (den luker bare ut feil i et
+allerede mottatt svar). Siden rå-modellsvar ikke logges (NFR3), kan ikke
+den eksakte årsaken bekreftes, men den mest nærliggende forklaringen,
+sammenholdt med funn 1 i samme svar: det (feilaktige) CV-forslaget var
+koblet til nøyaktig det samme IT-kravet som skulle vært et eget
+kompetansegap. Det er nærliggende at modellen, når den "ser" et krav som
+adressert av ETT funn (uansett hvor svakt), ikke også oppretter et eget
+kompetansegap for samme krav. Forrige økts regel 9 ba modellen vurdere hver
+navngitte del av et sammensatt krav for seg, men sa ikke eksplisitt at dette
+gjelder uavhengig av om kravet allerede er (svakt) koblet et annet sted.
+
+**Funn 3** er en beslektet, men egen svakhet: en generell, udokumentert
+egenskap (å kombinere jobb og studier) ble brukt som om den i seg selv var
+den "relevante erfaringen" som kunne kompensere for et fagspesifikt
+mastergrad-krav – uten at egenskapen faktisk er relevant for kravets eget
+fagområde (økonomi/IT). Dette er en innholdsmessig/resonnementsmessig
+svakhet i selve svaret, ikke noe en deterministisk sitatkontroll kan avgjøre.
+
+### Endringene
+
+- **`backend/app/grounding.py`**: `_filter_related_requirement_ids` bruker
+  nå KUN `cv_excerpt` (ikke forslagsteksten) som grunnlag for CV-forslagets
+  krav-koblinger – en direkte utvidelse av det samme prinsippet som
+  tidligere fjernet `job_ad_excerpt` fra grunnlaget. Styrker og
+  kompetansegap er IKKE endret (ingen tilsvarende feil funnet for styrker
+  denne runden, og kompetansegap har aldri noe `cv_excerpt` å falle tilbake
+  på).
+- **`backend/app/prompts.py`**: regel 9 er omskrevet til å si eksplisitt at
+  et sammensatt krav skal brytes ned i de navngitte delene, og hver del
+  vurderes for seg. Ny regel 11 sier at en svak/indirekte krav-kobling
+  ALDRI fritar fra plikten i regel 9 – et krav kan ha både en relatert
+  styrke/forslag OG et eget kompetansegap samtidig. Ny regel 12 presiserer
+  at en "kan kompenseres av relevant erfaring"-nyanse (regel 10) ikke kan
+  oppfylles av en generell, udokumentert egenskap – kompenserende erfaring
+  må være relevant for kravets eget fagområde.
+
+### Testing og kvalitetssikring
+
+- Ny regresjonstest (`test_suggestion_own_text_cannot_self_confirm_requirement_link`)
+  gjenskaper funn 1 med syntetisk, oppdiktet CV-/annonsetekst. Bekreftet
+  manuelt at testen **feilet før** endringen (koblingen ble feilaktig
+  beholdt) og **består etter**.
+- Ny regresjonstest (`test_suggestion_related_requirement_link_survives_via_relevant_cv_excerpt`)
+  bekrefter at en legitim CV-forslag-kobling fortsatt fungerer når det er
+  det faktiske CV-sitatet (ikke forslagsteksten) som deler et presist
+  fagord med kravet.
+- Full backend-testsuite: **85 av 85 bestått** (opp fra 83 – de to nye
+  testene). Frontend-testsuiten: **23 av 23 bestått** (uendret).
+- Ingen nye OpenAI-kall. Ingen ekte CV, personopplysninger eller
+  stillingsannonsetekst er lagt i repoet – kun syntetisk, oppdiktet
+  eksempeltekst i testfilen.
+
+### Kritisk vurdering – hva som er bevist, og hva som fortsatt er usikkert
+
+**Bevist, deterministisk:** fiksen for funn 1 i `grounding.py`. Dette er
+verifisert med fail-before/pass-after på samme måte som alle tidligere
+rettinger i denne modulen – testen feiler garantert uten endringen og
+består garantert med den, uavhengig av hva en språkmodell gjør i neste
+ekte kall.
+
+**IKKE bevist, kun begrunnet:** promptendringene for funn 2 og 3 (regel 9
+omskrevet, regel 11 og 12 nye). Disse er IKKE testet mot et nytt, ekte
+OpenAI-kall i denne økten, fordi oppgaven eksplisitt forbød dette. At den
+tidligere regel 9 (fra forrige økt) beviselig IKKE løste funn 2 i et ekte
+svar, er i seg selv et konkret datapunkt om at promptjusteringer alene ikke
+kan garanteres å fungere – kun observeres i etterkant, med en ny reell test.
+Det kan derfor ikke, og skal ikke, påstås at de nye promptreglene faktisk
+løser funn 2 og 3 før en slik test er kjørt.
+
+### Status
+
+Funn 1 (CV-forslag koblet til urelatert fagkrav) er rettet og bevist med en
+regresjonstest, som en direkte utvidelse av den tidligere styrke-fiksen til
+CV-forslag. Funn 2 og 3 er adressert med mer konkrete, begrunnede
+promptregler, men – i tråd med erfaringen fra forrige runde, der regel 9
+beviselig ikke løste funn 2 i praksis – er det eksplisitt IKKE påstått at
+disse nye reglene faktisk virker mot en ekte språkmodell. Dette gjenstår å
+bekrefte med en ny, reell test.

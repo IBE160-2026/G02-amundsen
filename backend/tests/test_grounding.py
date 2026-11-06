@@ -31,7 +31,8 @@ CV_TEXT = (
     "Grunnleggende kunnskap i SQL fra et skoleprosjekt.\n"
     "Liker å bruke digitale verktøy i det daglige arbeidet.\n"
     "Stor arbeidskapasitet og evne til å håndtere store mengder "
-    "arbeidsoppgaver og tidsfrister samtidig."
+    "arbeidsoppgaver og tidsfrister samtidig.\n"
+    "Kombinerte fulltidsjobb og studier over tre år."
 )
 JOB_AD_TEXT = (
     "Vi søker en utvikler.\n"
@@ -41,7 +42,9 @@ JOB_AD_TEXT = (
     "Gode kommunikasjonsevner er ønskelig.\n"
     "Krever erfaring med prosjektstyringsverktøy som Jira eller Trello.\n"
     "Krever erfaring med IT-kostnadsmodeller, lisensforvaltning og "
-    "analyse av store datamengder."
+    "analyse av store datamengder.\n"
+    "Mastergrad er ønskelig, men relevant erfaring kan kompensere for "
+    "manglende mastergrad."
 )
 
 
@@ -430,6 +433,66 @@ def test_shares_relevant_keyword_false_for_generic_capacity_words_alone():
     b = "Krever erfaring med analyse av store datamengder"
 
     assert _shares_relevant_keyword(a, b) is False
+
+
+def test_suggestion_own_text_cannot_self_confirm_requirement_link():
+    """Speiler en oppfølgende reell brukertest (06.11.2026, samme anonymiserte
+    CV/Statnett-annonse som i forrige runde, etter forrige retting): et
+    CV-forslag om å fremheve "å kombinere fulltidsjobb og studier" ble koblet
+    til et krav om "analyse av store datamengder" fordi FORSLAGSTEKSTEN selv
+    nevnte "store datamengder" for å begrunne forslaget – ikke fordi
+    CV-sitatet («kombinerte fulltidsjobb og studier») faktisk har noe med
+    dataanalyse å gjøre. Samme svakhet som job_ad_excerpt hadde (se
+    `app/grounding.py`), nå rettet for CV-forslag spesifikt: kun
+    `cv_excerpt` kan bekrefte krav-koblingen for et CV-forslag."""
+
+    data_requirement = JobRequirement(
+        id="jr_data", description="Krever erfaring med analyse av store datamengder"
+    )
+    suggestion = CvSuggestion(
+        id="c_kombinere",
+        suggestion=(
+            "Fremhev at du har kombinert fulltidsjobb og studier – dette kan "
+            "underbygge at du er vant til analyse av store datamengder i en "
+            "hektisk hverdag."
+        ),
+        related_requirement_ids=["jr_data"],
+        source=SourceReference(
+            cv_excerpt="Kombinerte fulltidsjobb og studier over tre år",
+            job_ad_excerpt="analyse av store datamengder",
+        ),
+    )
+    result = _result(suggestions=[suggestion], job_requirements=[data_requirement])
+
+    cleaned = enforce_grounding(result, cv_text=CV_TEXT, job_ad_text=JOB_AD_TEXT)
+
+    assert len(cleaned.cv_suggestions) == 1
+    assert cleaned.cv_suggestions[0].related_requirement_ids == []
+
+
+def test_suggestion_related_requirement_link_survives_via_relevant_cv_excerpt():
+    """Regresjonsvern: et CV-forslag skal fortsatt kunne kobles til et krav
+    når det er det faktiske CV-sitatet (ikke forslagsteksten) som deler et
+    presist fagord med kravet."""
+
+    sql_requirement = JobRequirement(
+        id="jr_sql", description="Krever god kjennskap til SQL for rapportering"
+    )
+    suggestion = CvSuggestion(
+        id="c_sql",
+        suggestion="Fremhev SQL-kunnskapen din tidligere i CV-en.",
+        related_requirement_ids=["jr_sql"],
+        source=SourceReference(
+            cv_excerpt="Grunnleggende kunnskap i SQL fra et skoleprosjekt",
+            job_ad_excerpt="Krever god kjennskap til SQL for rapportering",
+        ),
+    )
+    result = _result(suggestions=[suggestion], job_requirements=[sql_requirement])
+
+    cleaned = enforce_grounding(result, cv_text=CV_TEXT, job_ad_text=JOB_AD_TEXT)
+
+    assert len(cleaned.cv_suggestions) == 1
+    assert cleaned.cv_suggestions[0].related_requirement_ids == ["jr_sql"]
 
 
 def test_suggestion_mirrors_qa_report_case_3_irrelevant_cv_excerpt_is_dropped():
