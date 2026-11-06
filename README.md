@@ -121,18 +121,23 @@ under `/api/*` rutes til FastAPI-backenden, resten rutes til React/Vite-frontend
   ("ingen gyldig API-nøkkel"), ikke en krasj.
 - For å teste normalmodus med ekte KI-analyse akkurat nå: kjør applikasjonen **lokalt**
   med din egen `OPENAI_API_KEY` (se "Kjøre applikasjonen lokalt" over).
-- **Kjent, åpent sikkerhetspunkt:** nøkkelen som ble brukt i produksjonstesten er ikke
-  tilbakekalt hos OpenAI. Eldre Vercel-deployments kan i prinsippet fortsatt ha tilgang
-  til den, selv om den er fjernet fra gjeldende miljøkonfigurasjon. Se
+- **Sikkerhetspunkt, nå løst:** nøkkelen som ble brukt i produksjonstesten er bekreftet
+  (06.11.2026, manuell kontroll hos OpenAI) ikke lenger aktiv – kun en nyere, lokal
+  nøkkel står som Active. Normalmodus forblir likevel avslått på den offentlige,
+  uinnloggede Vercel-siden: en eventuell ny nøkkel skal ikke publiseres der uten at
+  tilgangskontroll/innlogging er på plass først, siden v1 ikke har noe som hindrer
+  uvedkommende fra å bruke opp forhåndsbetalte kreditter. Se
   [`.logs/sondre-tveit-amundsen/issues.md`](.logs/sondre-tveit-amundsen/issues.md).
 
 ### Manuelt i Vercel (for å aktivere normalmodus i produksjon på nytt)
 
-1. **Tilbakekall/roter den tidligere brukte API-nøkkelen hos OpenAI først** (se
-   sikkerhetspunktet over), før en eventuell ny nøkkel settes opp.
-2. Sett et forbrukstak/budsjettgrense for den nye nøkkelen direkte i OpenAI sin
-   plattform – dette er det viktigste forsvaret mot at uvedkommende bruker opp
-   kredittene, siden v1 ikke har innlogging.
+1. **Sett opp tilgangskontroll/innlogging før en ny nøkkel publiseres** (se
+   sikkerhetspunktet over) – den tidligere testnøkkelen er bekreftet ikke lenger
+   aktiv, men det løser ikke det grunnleggende problemet med en offentlig,
+   uinnlogget side.
+2. Sett i tillegg et forbrukstak/budsjettgrense for den nye nøkkelen direkte i
+   OpenAI sin plattform – et ekstra forsvar mot at uvedkommende bruker opp
+   kredittene.
 3. Sett deretter miljøvariabelen `OPENAI_API_KEY` for **Production**-miljøet i Vercel
    sitt dashbord (eller med `vercel env add`) – **aldri** i en fil som committes.
    `OPENAI_MODEL` og `OPENAI_TIMEOUT_SECONDS` er valgfrie (har standardverdier i koden).
