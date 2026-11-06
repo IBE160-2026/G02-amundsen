@@ -1058,3 +1058,104 @@ promptregler, men – i tråd med erfaringen fra forrige runde, der regel 9
 beviselig ikke løste funn 2 i praksis – er det eksplisitt IKKE påstått at
 disse nye reglene faktisk virker mot en ekte språkmodell. Dette gjenstår å
 bekrefte med en ny, reell test.
+
+## 06.11.2026 – Tredje reelle Statnett-test (etter siste grounding-/promptforbedringer)
+
+### Gjennomføringen
+
+Brukeren gjennomførte en tredje reell test av normalmodus lokalt, med samme
+anonymiserte CV og samme Statnett-stillingsannonse som de to foregående
+testene denne dagen – nå etter at både grounding-fiksen for CV-forslag
+(`backend/app/grounding.py`) og de omskrevne/nye promptreglene 9, 11 og 12
+(`backend/app/prompts.py`) var på plass. Dette er den tredje og siste
+reelle API-testen i prosjektperioden mot nøyaktig dette CV-/annonseparet.
+
+### Hva som faktisk ble observert
+
+**Bekreftet forbedring (sammenlignet med forrige test):**
+- Den tidligere feilaktige koblingen mellom generell arbeidskapasitet og
+  analyse av store datamengder var borte. Dette er den ENE promptrelaterte
+  endringen fra forrige runde som nå er bekreftet å faktisk ha effekt i et
+  ekte svar, ikke bare i en regresjonstest.
+
+**I hovedsak positivt, men ikke en garanti om perfeksjon:**
+- Styrkene knyttet til økonomi, budsjett, offentlige anskaffelser og
+  kommunikasjon var i hovedsak relevante.
+- To CV-forslag var forsiktig formulert og støttet av CV-innholdet.
+- Søknadsutkastet var sammenhengende og inneholdt ingen åpenbare oppdiktede
+  kvalifikasjoner.
+
+**Fortsatt en reell, ubekreftet-løst begrensning:**
+- Kompetansegapene var fortsatt ufullstendige: kun manglende mastergrad ble
+  identifisert, mens IT-controlling, IT-drift/lisenser, analyse av store
+  datamengder og andre udokumenterte kvalifikasjoner IKKE kom frem som egne
+  gap. Dette er nøyaktig funn 2 fra forrige test, og det er dermed nå
+  bekreftet, over tre reelle tester i rad, at verken den opprinnelige regel
+  9, eller den omskrevne regel 9 + nye regel 11, har løst dette i praksis.
+  **Det skal derfor ikke påstås at kompetansegap-problemet er løst** – kun
+  at én annen, beslektet feil (funn 1 fra forrige test) er borte.
+
+**Nye, mindre presise funn (samme grunnleggende svakhetsklasse, nye konkrete utslag):**
+- Enkelte styrkebeskrivelser var fortsatt noe for bastante – f.eks. ble
+  presentasjon av løsninger fremstilt som erfaring med analyser, en noe for
+  sterk tolkning av det CV-en faktisk dokumenterer.
+- Bachelorutdanning ble koblet som en relevant styrke til mastergrad-kravet,
+  samtidig som manglende mastergrad korrekt sto oppført som et eget
+  kompetansegap. Dette er ikke nødvendigvis feil i seg selv (en bachelor ER
+  relevant bakgrunn for et krav der mastergrad er ønskelig), men resultatet
+  fremstår som et motstridende signal i samme svar, uten at noen eksplisitt
+  nyanse forklarer forholdet mellom de to.
+
+### Kritisk vurdering – hva er observert, hva er fortsatt usikkert
+
+**Faktisk observert, i dette ene ekte svaret:** alle punktene over. Dette er
+ett (det tredje) datapunkt mot ett og samme CV-/annonsepar, ikke en
+statistisk bekreftelse mot en bredere populasjon av CV-er/annonser. Som i
+alle tidligere runder logges ikke rå-modellsvar (NFR3), så ingenting av
+dette kan etterprøves i detalj senere – kun det brukeren selv rapporterte,
+er grunnlaget for denne seksjonen.
+
+**Bekreftet, med rimelig sikkerhet:** grounding-fiksen for CV-forslag
+(forrige runde) hadde den tiltenkte effekten i et ekte svar.
+
+**IKKE bekreftet, og skal ikke påstås bekreftet:** at regel 9/11 (sammensatte
+krav skal brytes ned og gap skal opprettes uavhengig av svake koblinger
+andre steder) faktisk endrer modellens oppførsel for kompetansegap. Tre
+reelle tester i rad har nå vist samme mangel. Det mest sannsynlige, men
+ikke bekreftbare, er at dette krever en annen type tiltak enn
+prompt-presisering alene (f.eks. en strukturert, trinnvis kravsjekk i
+prompten, eller en helt annen tilnærming) – men det er en hypotese for en
+eventuell senere versjon, ikke noe som utredes eller implementeres nå (se
+beslutning under).
+
+### Beslutning: videre funksjonsutvikling avsluttes her
+
+Etter denne tredje reelle testen avsluttes videre funksjonell utvikling av
+analyselogikken (prompt og grounding) for denne prosjektleveransen. Dette
+er en bevisst beslutning, ikke en konsekvens av tidsnød alene, og
+begrunnes med:
+
+- **Kjernefunksjonaliteten fungerer.** Alle FR1–FR12 i `prd.md` er
+  implementert og verifisert (automatisert testdekning + fire manuelle
+  testsett + tre reelle produksjonsnære tester), og de mest alvorlige,
+  konkrete feilene som ble funnet underveis (feilaktige krav-koblinger,
+  forsvinnende SQL-gap, selvbekreftende sitater) er rettet og dekket av
+  regresjonstester.
+- **De kjente begrensningene er forstått og dokumentert**, ikke oversett:
+  nøkkelord-heuristikkens grunnleggende grense (kan ikke skille perfekt
+  mellom "åpenbart feilkoblet" og "reelt relatert med andre ord"), og at
+  modellen – over tre reelle tester – konsekvent underrapporterer
+  kompetansegap for sammensatte, tekniske krav.
+- **Videre promptjustering har ikke dokumentert sikker effekt.** Den
+  forrige rundens regel 9/11/12 var en velbegrunnet, målrettet innsats, men
+  løste beviselig IKKE hovedfunnet (manglende IT-relaterte kompetansegap) i
+  praksis. Å fortsette å justere prompten ytterligere, uten en ny
+  arbeidshypotese utover "presiser reglene enda mer", vurderes som lav
+  sannsynlighet for å lønne seg innenfor gjenværende prosjekttid, og risikerer
+  i stedet å introdusere nye, utestede regresjoner i en prompt som allerede
+  er relativt omfattende.
+- Dette er en v1-begrensning på linje med de som allerede er akseptert og
+  dokumentert tidligere i denne loggen (f.eks. nøkkelord-heuristikkens grense
+  for "kundeservice/opplæring" vs. "kommunikasjonsevner", akseptert
+  05.11.2026) – ikke en skjult mangel, men en bevisst grense for hva v1
+  leverer, synlig for både bruker og sensor i README, `issues.md` og her.
