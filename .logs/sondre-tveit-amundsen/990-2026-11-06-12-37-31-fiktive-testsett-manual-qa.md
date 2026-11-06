@@ -62,3 +62,30 @@ Nøyaktig 3 ekte, betalte API-kall ble gjort (grensen uten ny godkjenning). Inge
 - Mønsteret med at reelt CV-innhold noen ganger ikke anerkjennes som en bekreftet styrke (sett i testsett 2 og 4) bør følges med på ved videre testing, men er ikke nødvendigvis en feil som skal rettes isolert.
 - Testsett 1 er ikke kjørt denne runden (gjenbruker eksisterende, validert demodata – ingen ny kjøring nødvendig).
 - Øvrige, tidligere åpne punkter er uendret, se `issues.md`.
+
+## 2026-11-06 kl. 13:00 — Sondre Tveit Amundsen
+
+### Oppgave
+Rette det bekreftede avviket fra testsett 4 (Thomas Berg): en vag CV-opplysning om «digitale verktøy» ble koblet til et spesifikt Jira/Trello-krav via `related_requirement_ids`, fordi styrkens `job_ad_excerpt` var satt til nøyaktig kravets egen beskrivelsestekst. Oppgaven ble sendt på nytt av brukeren etter en tidligere, utilsiktet duplikatsending som ble stoppet uten at noe ble gjort (bekreftet: ingen filer endret, ingen API-kall i den avbrutte runden). Denne gangen: minst mulig, målrettet fiks i `backend/app/grounding.py`, en regresjonstest som beviselig feiler før og består etter, kontroll av at legitime koblinger (SQL, overførbar erfaring) fortsatt fungerer, full backend-testkjøring, og dokumentasjon i `process-log.md` – uten nye API-kall, uten å røre modell/prompts/Vercel/testforventninger, og uten selv å committe applikasjonskode eller `process-log.md`.
+
+### Plan
+- Leste `_filter_related_requirement_ids` i `grounding.py` på nytt for å bekrefte årsaken presist før noe ble endret.
+- La til tre nye tester i `test_grounding.py` FØRST, uten å endre `grounding.py`: én som gjenskaper testsett 4-feilen nøyaktig (styrke om "digitale verktøy" med `job_ad_excerpt` satt til kravets egen tekst), og to som dokumenterer legitime koblinger som skal overleve (SQL via `cv_excerpt`; overførbar kundeservice-erfaring via `cv_excerpt`) – utvidet samtidig de delte `CV_TEXT`/`JOB_AD_TEXT`-fixturene med de nye, nødvendige sitatene.
+- Kjørte de tre nye testene mot uendret kode: bekreftet at bug-gjenskapings-testen **feilet** (koblingen ble feilaktig beholdt), mens de to legitime-kobling-testene allerede **passerte** (god baseline, viser de ikke var brutt av noe annet).
+- Gjorde den minimale fiksen: fjernet `job_ad_excerpt` fra sammenligningsgrunnlaget i `_filter_related_requirement_ids`, slik at kun funnets egen påstand + `cv_excerpt` kan bekrefte en krav-kobling. Oppdaterte modulens topp-docstring med en tredje runde-forklaring, i samme stil som de to foregående rundene.
+- Kjørte de tre testene på nytt: bekreftet alle tre nå **består**. Kjørte hele backend-testsuiten (81/81, opp fra 78 – ingen eksisterende test endret eller fjernet).
+- Oppdaterte `process-log.md` med feilen, årsaken, rettingen og testresultatene. Kontrollerte med `git status`/`git diff --stat` at kun `grounding.py`, `test_grounding.py` og `process-log.md` er endret, og at alle seks eksisterende testresultat-/vurderingsfiler fra forrige økt er helt uendret (bevart, som instruert).
+
+### Resultat
+Endrede filer:
+- `backend/app/grounding.py` – `_filter_related_requirement_ids` bruker ikke lenger `job_ad_excerpt` i sammenligningsgrunnlaget; utvidet docstring.
+- `backend/tests/test_grounding.py` – tre nye tester + utvidede delte fixtures.
+- `process-log.md` – ny seksjon om feilen, årsaken, rettingen og testresultatene.
+
+Testresultat: `uv run pytest` → **81 av 81 bestått** (opp fra 78). Bug-regresjonstesten er verifisert å feile før og bestå etter rettingen (vist i selve testkjøringen, ikke bare påstått).
+
+Ingen ekte OpenAI-kall ble gjort. Ingen endring av modell, prompts, Vercel eller de forhåndsdefinerte testforventningene/-resultatene i `backend/test-data/manual-qa/` (bekreftet uendret). Ingen git-commit/push av applikasjonskode eller `process-log.md` er gjort (på brukerens eksplisitte instruks – dette gjør brukeren selv) – kun denne loggfilen og `issues.md` committes av `sesjonslogg`-skillen.
+
+### Åpne punkter
+- De to øvrige, mindre funnene fra testrunden (testsett 2: req4/req7 ikke tydelig koblet til styrke, req6 fikk et velvillig skjønn; testsett 4: JR4-mønsteret med "forslag om å fremheve" i stedet for bekreftet styrke) er IKKE del av denne rettingen og står fortsatt åpne.
+- Øvrige, tidligere åpne punkter er uendret, se `issues.md`.
