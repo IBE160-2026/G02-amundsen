@@ -1,7 +1,7 @@
 [project]
 name = "backend"
 version = "0.1.0"
-description = "Add your description here"
+description = "FastAPI-backend for Career Transition Assistant (IBE160-gruppeprosjekt G02)"
 readme = "README.md"
 authors = [
     { name = "Sondre Tveit Amundsen", email = "sondre.t.amundsen@himolde.no" }

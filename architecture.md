@@ -149,7 +149,8 @@ Demomodus skal bruke samme frontend-komponenter og samme resultatstruktur som no
 
 Prosjektet skal organiseres slik at frontend, backend, dokumentasjon og testdata er tydelig skilt.
 
-Foreslått struktur:
+Faktisk struktur (oppdatert 06.11.2026 til å stemme med det ferdige prosjektet –
+se avsnitt om `docs/`-mappen under):
 
 ```text
 G02-amundsen/
@@ -157,6 +158,7 @@ G02-amundsen/
 ├── frontend/
 │   ├── src/
 │   ├── public/
+│   ├── .env.example
 │   └── package.json
 │
 ├── backend/
@@ -165,20 +167,33 @@ G02-amundsen/
 │   ├── test-data/
 │   │   ├── demo-cv.txt
 │   │   ├── demo-job-ad.txt
-│   │   └── demo-result.json
+│   │   ├── demo-result.json
+│   │   └── manual-qa/        (fiktive testsett for manuell KI-kvalitetssikring)
+│   ├── .env.example
 │   ├── pyproject.toml
 │   └── uv.lock
 │
-├── docs/
-│   ├── product-brief.md
-│   ├── prd.md
-│   ├── architecture.md
-│   └── process-log.md
+├── .logs/<bruker>/           (sesjonslogger og issues.md, se README)
 │
-├── .env.example
+├── product-brief.md
+├── tilbakemelding-product-brief.md
+├── prd.md
+├── architecture.md
+├── epics-and-stories.md
+├── process-log.md
+│
+├── CLAUDE.md
 ├── .gitignore
 ├── vercel.json
 └── README.md
+```
+
+Planleggingsdokumentene ligger altså samlet på repo-roten, ikke i en egen
+`docs/`-mappe som et tidligere utkast av dette avsnittet beskrev – det ble aldri
+opprettet noen slik mappe. Det finnes heller ingen `.env.example` på selve
+repo-roten; API-nøkler og annen lokal konfigurasjon er dokumentert separat for
+frontend (`frontend/.env.example`) og backend (`backend/.env.example`), se
+avsnitt 6.
 
 ### Prinsipper
 - frontend og backend skal være tydelig separert
