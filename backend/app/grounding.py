@@ -88,6 +88,23 @@ Dette er dokumentert og testet som kjent, akseptert oppførsel (se
 `test_grounding.py`), ikke en feil – kostnaden ved det er lav (funnet vises
 fortsatt, bare uten den ene krav-koblingen), mens den opprinnelige feilen
 (bacheloroppgave->Power BI) var en synlig, misvisende påstand om relevans.
+
+En tredje runde med manuell kvalitetssikring (06.11.2026, testsett 4
+"Thomas Berg" i `backend/test-data/manual-qa/`) viste en ny, konkret feil av
+samme familie: en vag styrke om "digitale verktøy" ble koblet via
+`related_requirement_ids` til et spesifikt krav om "prosjektstyringsverktøy
+som Jira eller Trello". Årsaken (igjen undersøkt i koden, ikke gjettet):
+`_filter_related_requirement_ids` sammenlignet kravets beskrivelse mot
+funnets egen påstand OG BÅDE `cv_excerpt` OG `job_ad_excerpt` samlet. Siden
+språkmodellen hadde satt `job_ad_excerpt` til nøyaktig kravets egen
+beskrivelsestekst, "delte" kravet nøkkelord med seg selv – helt uavhengig av
+om `cv_excerpt` ("digitale verktøy") faktisk hadde noe å gjøre med kravet
+("Jira eller Trello"). Fiksen fjerner `job_ad_excerpt` fra dette
+sammenligningsgrunnlaget: kun funnets egen påstand og dets faktiske
+CV-dokumentasjon kan nå bekrefte en krav-kobling. Dette er bevisst en minimal
+endring – kun denne ene sammenligningen er justert – og er verifisert mot at
+legitime koblinger (bl.a. et kort fagord som "SQL", og overførbar erfaring
+fra en deltidsjobb) fortsatt fungerer, se `test_grounding.py`.
 """
 
 from __future__ import annotations
@@ -207,15 +224,22 @@ def _filter_related_requirement_ids(
 ) -> list[str]:
     """Beholder kun krav-ID-er der selve kravteksten faktisk handler om
     samme tema som funnet – dette er den direkte fiksen for at f.eks. en
-    styrke om en bacheloroppgave ble koblet til et krav om Power BI."""
+    styrke om en bacheloroppgave ble koblet til et krav om Power BI.
+
+    `job_ad_excerpt` er BEVISST IKKE med i sammenligningsgrunnlaget her.
+    Et `job_ad_excerpt` er nesten alltid hentet fra stillingsannonsen, og
+    kan derfor lett overlappe med SELVE kravet det er festet til – helt
+    uavhengig av om CV-en faktisk dokumenterer noe relevant. Manuell
+    kvalitetssikring (06.11.2026, testsett 4 "Thomas Berg") viste nøyaktig
+    dette: en vag styrke om "digitale verktøy" ble koblet til et spesifikt
+    Jira/Trello-krav fordi styrkens `job_ad_excerpt` var satt til nøyaktig
+    kravets egen beskrivelsestekst – kravet "delte nøkkelord" med seg selv.
+    Det er derfor kun funnets egen påstand og dets faktiske CV-dokumentasjon
+    (`cv_excerpt`) som avgjør om en krav-kobling er reell."""
 
     own_text = " ".join(
         part
-        for part in (
-            _own_claim_text(item),
-            cleaned_source.cv_excerpt or "",
-            cleaned_source.job_ad_excerpt or "",
-        )
+        for part in (_own_claim_text(item), cleaned_source.cv_excerpt or "")
         if part
     )
 

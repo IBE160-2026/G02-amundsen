@@ -27,14 +27,17 @@ CV_TEXT = (
     "Kari Nordmann\nMaster i informatikk.\n"
     "Bacheloroppgave om kundetilfredshet i varehandelen.\n"
     "Erfaring med Python og JavaScript.\n"
-    "Kundeservice og opplæring av nyansatte i deltidsjobb."
+    "Kundeservice og opplæring av nyansatte i deltidsjobb.\n"
+    "Grunnleggende kunnskap i SQL fra et skoleprosjekt.\n"
+    "Liker å bruke digitale verktøy i det daglige arbeidet."
 )
 JOB_AD_TEXT = (
     "Vi søker en utvikler.\n"
     "Krever kjennskap til Python.\n"
     "Krever erfaring med Power BI for rapportering.\n"
     "Krever god kjennskap til SQL for rapportering.\n"
-    "Gode kommunikasjonsevner er ønskelig."
+    "Gode kommunikasjonsevner er ønskelig.\n"
+    "Krever erfaring med prosjektstyringsverktøy som Jira eller Trello."
 )
 
 
@@ -286,6 +289,90 @@ def test_strength_followup_known_limitation_differently_worded_link_is_still_rem
     # det er bare krav-koblingen som forsvinner.
     assert len(cleaned.strengths) == 1
     assert cleaned.strengths[0].related_requirement_ids == []
+
+
+def test_strength_followup_fix_job_ad_excerpt_cannot_self_confirm_requirement_link():
+    """Speiler manuell kvalitetssikring 06.11.2026 (testsett 4, "Thomas Berg"):
+    en vag styrke om "digitale verktøy" ble koblet til et spesifikt krav om
+    Jira/Trello, fordi styrkens eget `job_ad_excerpt` var satt til nøyaktig
+    samme tekst som selve kravbeskrivelsen – da deler kravet "nøkkelord" med
+    SEG SELV, uavhengig av om `cv_excerpt` faktisk dokumenterer noe relevant.
+
+    Koblingen skal fjernes. Styrken selv er fortsatt gyldig (sitatet er ekte),
+    bare uten den misvisende krav-koblingen."""
+
+    jira_trello_requirement = JobRequirement(
+        id="jr_jira",
+        description="Krever erfaring med prosjektstyringsverktøy som Jira eller Trello",
+    )
+    strength = Strength(
+        id="s_digitale_verktoy",
+        description="Har erfaring med digitale verktøy i daglig arbeid",
+        related_requirement_ids=["jr_jira"],
+        source=SourceReference(
+            cv_excerpt="Liker å bruke digitale verktøy i det daglige arbeidet",
+            # Satt til ORDLYDEN I KRAVET SELV – dette var den konkrete rotårsaken.
+            job_ad_excerpt="Krever erfaring med prosjektstyringsverktøy som Jira eller Trello",
+        ),
+    )
+    result = _result(strengths=[strength], job_requirements=[jira_trello_requirement])
+
+    cleaned = enforce_grounding(result, cv_text=CV_TEXT, job_ad_text=JOB_AD_TEXT)
+
+    assert len(cleaned.strengths) == 1
+    assert cleaned.strengths[0].related_requirement_ids == []
+
+
+def test_strength_related_requirement_link_survives_via_relevant_cv_excerpt_sql():
+    """Regresjonsvern: en legitim kobling skal fortsatt overleve når det er
+    CV-SITATET selv (ikke et selvbekreftende job_ad_excerpt) som deler et
+    nøkkelord med kravet – her et kort, presist fagord ("SQL"). Et irrelevant
+    `job_ad_excerpt` er bevisst satt for å vise at det ikke lenger spiller
+    noen rolle for denne kontrollen."""
+
+    sql_requirement = JobRequirement(
+        id="jr_sql", description="Krever god kjennskap til SQL for rapportering"
+    )
+    strength = Strength(
+        id="s_sql",
+        description="Har grunnleggende kunnskap i SQL",
+        related_requirement_ids=["jr_sql"],
+        source=SourceReference(
+            cv_excerpt="Grunnleggende kunnskap i SQL fra et skoleprosjekt",
+            job_ad_excerpt="Vi søker en utvikler",  # urelatert del av annonsen
+        ),
+    )
+    result = _result(strengths=[strength], job_requirements=[sql_requirement])
+
+    cleaned = enforce_grounding(result, cv_text=CV_TEXT, job_ad_text=JOB_AD_TEXT)
+
+    assert len(cleaned.strengths) == 1
+    assert cleaned.strengths[0].related_requirement_ids == ["jr_sql"]
+
+
+def test_strength_related_requirement_link_survives_for_transferable_experience():
+    """Regresjonsvern for overførbar erfaring: en styrke om kundeservice fra
+    deltidsjobb skal fortsatt kobles til et krav som faktisk nevner
+    kundeservice, uten at noe `job_ad_excerpt` er involvert."""
+
+    customer_service_requirement = JobRequirement(
+        id="jr_cs", description="God erfaring med kundeservice"
+    )
+    strength = Strength(
+        id="s_cs",
+        description="Har erfaring med kundeservice fra deltidsjobb",
+        related_requirement_ids=["jr_cs"],
+        source=SourceReference(
+            cv_excerpt="Kundeservice og opplæring av nyansatte i deltidsjobb",
+            job_ad_excerpt=None,
+        ),
+    )
+    result = _result(strengths=[strength], job_requirements=[customer_service_requirement])
+
+    cleaned = enforce_grounding(result, cv_text=CV_TEXT, job_ad_text=JOB_AD_TEXT)
+
+    assert len(cleaned.strengths) == 1
+    assert cleaned.strengths[0].related_requirement_ids == ["jr_cs"]
 
 
 def test_suggestion_mirrors_qa_report_case_3_irrelevant_cv_excerpt_is_dropped():

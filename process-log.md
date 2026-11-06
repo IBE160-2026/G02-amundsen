@@ -723,3 +723,126 @@ Normalmodus er bekreftet fungerende i produksjon gjennom en kontrollert, tidsavg
 test, men er **deaktivert** igjen i den nåværende produksjonskonfigurasjonen. Den
 opprinnelige nøkkelen står fortsatt som et åpent, dokumentert sikkerhetspunkt til den
 tilbakekalles hos OpenAI.
+
+
+## 06.11.2026 – Manuell kvalitetssikring mot tre nye fiktive testsett (ekte OpenAI)
+
+### Gjennomføring
+
+Kjørte normalmodus lokalt (`uv run uvicorn app.main:app`, egen `backend/.env`) mot
+testsett 2–4 i `backend/test-data/manual-qa/`, ett ekte `POST /api/analyze`-kall per
+sett (3 kall totalt, ingen retries). Forventningene var låst og committet (commit
+`75df966`) før noe av disse tre kallene ble gjort. Rå JSON-svar og en skriftlig
+vurdering er lagret i hvert testsetts mappe (`resultat-2026-11-06.json` og
+`vurdering-2026-11-06.md`).
+
+### Resultater
+
+| Testsett | Kandidat | Utfall |
+|---|---|---|
+| 2 | Markus Eide (tydelige kompetansegap) | Bestått med mindre avvik |
+| 3 | Sara Lund (overførbar deltidserfaring) | Bestått, uten avvik av betydning |
+| 4 | Thomas Berg (uklare kvalifikasjoner) | **Avvik funnet** |
+
+**Felles, positivt funn for alle tre:** ingen av «må aldri påstås»-listene ble
+brutt i fri tekst (styrkebeskrivelser eller søknadsutkast) – søknadsutkastene diktet
+ikke opp SQL, Python, Power BI, et CRM-system, et tredje fremmedspråk, Jira, Trello
+eller Excel. Alle kildesitater i alle tre svar ble kontrollert manuelt mot CV-en og
+stillingsannonsen, og var uten unntak ekte og ordrette.
+
+**Testsett 2 (Markus Eide):** to sentrale/ønskelige krav (interesse for data;
+kommunikasjon/presentasjon) ble ikke tydelig koblet til en bekreftet styrke, og ett
+krav (statistikk/metode) som var forventet som gap ble i stedet koblet til en
+kundetilfredshetsundersøkelse – et ekte sitat, men et i overkant velvillig skjønn.
+
+**Testsett 3 (Sara Lund):** den bevisste gråsonen (saksbehandlingssystem vs.
+CRM-system) ble håndtert eksemplarisk – verken overdrevet eller ignorert, men
+presentert som et korrekt, betinget forslag.
+
+**Testsett 4 (Thomas Berg) – bekreftet avvik:** en styrke beskrevet som "Har
+erfaring med digitale verktøy i daglig arbeid" (ekte, ordrett sitat) ble koblet via
+`related_requirement_ids` til kravet "Erfaring med prosjektstyringsverktøy som Jira
+eller Trello" – nøyaktig den sammenblandingen testsettet var designet for å avdekke.
+Årsaken ble undersøkt i koden: modellen satte `job_ad_excerpt` til nøyaktig samme
+tekst som selve kravbeskrivelsen, noe som gjør `grounding.py` sin
+nøkkelord-overlapp-kontroll selvreferensiell og dermed virkningsløs for dette
+tilfellet – den kontrollerer aldri CV-sitatet isolert mot kravet. Samme krav opptrer
+også selvmotsigende, både som bekreftet gap og som koblet styrke, i samme svar.
+
+**Gjennomgående mønster (testsett 2 og 4):** reelt, allerede dokumentert CV-innhold
+ble i flere tilfeller ikke anerkjent som en bekreftet styrke, og endte i stedet som
+et "forslag om å fremheve" – ikke en sikkerhetsfeil, men en kvalitetssvakhet verdt å
+følge med på.
+
+### Kritisk vurdering
+
+Dette er nøyaktig den typen funn den fjerde testsett-arketypen («uklare
+kvalifikasjoner») skulle avdekke, og bekrefter verdien av å ha bygget flere,
+varierte testsett i stedet for å stole på ett. Funnet i testsett 4 er en reell,
+presis identifisert svakhet i `grounding.py` – ikke i selve språkmodellkallet eller
+prompten – og peker på en konkret, avgrenset kodeendring (stram inn
+`_filter_related_requirement_ids` slik at den ikke kan bekrefte seg selv via et
+`job_ad_excerpt` som gjentar kravteksten). Denne endringen er **ikke gjort** i denne
+økten, i tråd med instruksen om ikke å endre applikasjonskode under selve testingen.
+
+### Status
+
+Tre av tre planlagte ekte kall er brukt (grensen på tre uten ny godkjenning). Ett
+bekreftet avvik i `grounding.py` er identifisert og dokumentert, med en konkret,
+avgrenset anbefalt fiks som ikke er implementert. Testsett 1 (Kari Nordmann) er ikke
+kjørt denne runden, siden det gjenbruker det eksisterende, allerede validerte
+demotestsettet.
+
+
+## 06.11.2026 – Målrettet retting av krav-koblingsfeilen fra testsett 4
+
+### Feilen og årsaken
+
+Som dokumentert i forrige seksjon: en styrke om "digitale verktøy" (ekte,
+ordrett sitert fra CV-en) ble i testsett 4 (Thomas Berg) koblet via
+`related_requirement_ids` til et spesifikt krav om "prosjektstyringsverktøy
+som Jira eller Trello", selv om CV-en ikke navngir noe slikt verktøy.
+
+Årsaken ble bekreftet i koden (ikke gjettet): `_filter_related_requirement_ids`
+i `backend/app/grounding.py` kontrollerte om kravets beskrivelse delte et
+"betydningsfullt" nøkkelord med funnets egen påstand OG BÅDE `cv_excerpt` OG
+`job_ad_excerpt` samlet. Språkmodellen hadde satt `job_ad_excerpt` til
+nøyaktig samme tekst som kravets egen beskrivelse – da "deler" kravet
+nødvendigvis nøkkelord med seg selv, helt uavhengig av om `cv_excerpt`
+("digitale verktøy") faktisk har noe å gjøre med kravet ("Jira eller
+Trello"). Kontrollen var dermed selvbekreftende i dette tilfellet.
+
+### Rettingen
+
+Minst mulig, målrettet endring: `job_ad_excerpt` er fjernet fra
+sammenligningsgrunnlaget i `_filter_related_requirement_ids`. Kun funnets
+egen påstand og dets faktiske CV-dokumentasjon (`cv_excerpt`) avgjør nå om en
+krav-kobling beholdes. Selve sitatkontrollen (at `cv_excerpt`/`job_ad_excerpt`
+må finnes ordrett i riktig kildetekst) er **uendret**.
+
+### Testing
+
+- Ny regresjonstest (`test_strength_followup_fix_job_ad_excerpt_cannot_self_confirm_requirement_link`)
+  gjenskaper testsett 4-tilfellet nøyaktig. Bekreftet at den **feilet før
+  rettingen** (koblingen ble feilaktig beholdt) og **består etter** (koblingen
+  fjernes, styrken selv forblir gyldig).
+- To nye regresjonstester bekrefter at legitime koblinger fortsatt fungerer
+  uten at `job_ad_excerpt` trengs: et kort, presist fagord ("SQL") og
+  overførbar erfaring (kundeservice fra deltidsjobb) – begge kobles korrekt
+  via `cv_excerpt` alene, uavhengig av om et urelatert `job_ad_excerpt` er
+  satt.
+- Full backend-testsuite: **81 av 81 bestått** (opp fra 78 – de tre nye
+  testene). Ingen eksisterende tester ble endret eller fjernet; den tidligere
+  dokumenterte, aksepterte begrensningen (kundeservice/opplæring vs.
+  "kommunikasjonsevner", uten delt ordforråd) er fortsatt dekket av sin egen
+  test og uendret i oppførsel.
+- Ingen ekte OpenAI-kall ble gjort. Ingen endring av modell, prompts, Vercel
+  eller de forhåndsdefinerte testforventningene i `backend/test-data/manual-qa/`.
+
+### Status
+
+Avviket fra testsett 4 er rettet med en minimal, godt avgrenset endring, og
+dekket av en regresjonstest som beviselig fanger opp nøyaktig denne
+feilklassen. De to øvrige, mindre funnene fra samme testrunde (mangelfull
+anerkjennelse av enkelte reelle styrker i testsett 2 og 4) er fortsatt åpne
+og ikke del av denne rettingen.
