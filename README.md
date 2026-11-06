@@ -2,17 +2,48 @@
 
 Gruppeprosjekt i **IBE160 Programmering med KI** ved Høgskolen i Molde, høsten 2026 (15 studiepoeng).
 
-Repoet inneholder gruppens applikasjon **Career Transition Assistant** og dokumentasjon av utvikling, testing og kvalitetssikring med KI. Se [`prd.md`](prd.md), [`architecture.md`](architecture.md) og [`epics-and-stories.md`](epics-and-stories.md) for produkt- og arkitekturbeskrivelse.
+Repoet inneholder gruppens applikasjon **Career Transition Assistant** og dokumentasjon av utvikling, testing og kvalitetssikring med KI.
 
-**Publisert applikasjon:** **https://g02-amundsen.vercel.app/** – demomodus fungerer direkte, uten noen API-nøkkel (se "Publisering på Vercel" under for status på normalmodus i produksjon).
+**Publisert applikasjon:** **https://g02-amundsen.vercel.app/** – demomodus fungerer direkte, uten noen API-nøkkel (se avsnittet «Publisering på Vercel» under for status på normalmodus i produksjon).
 
 ## Medlemmer
 
 - Sondre Tveit Amundsen
 
+## Dokumentasjon
+
+| Dokument | Innhold |
+|---|---|
+| [`product-brief.md`](product-brief.md) | Opprinnelig produktidé og avgrensning |
+| [`tilbakemelding-product-brief.md`](tilbakemelding-product-brief.md) | Faglærers tilbakemelding på product brief, inkl. sensorveiledningens kriterier |
+| [`prd.md`](prd.md) | Funksjonelle/ikke-funksjonelle krav og akseptansekriterier |
+| [`architecture.md`](architecture.md) | Teknologivalg, systemarkitektur og publiseringsoppsett |
+| [`epics-and-stories.md`](epics-and-stories.md) | Epics og brukerhistorier |
+| [`process-log.md`](process-log.md) | Løpende prosess- og KI-logg: beslutninger, feil som ble funnet, hvordan de ble rettet, og testresultater |
+| [`backend/test-data/manual-qa/`](backend/test-data/manual-qa/) | Fire fiktive testsett (CV + stillingsannonse) med forhåndsdefinerte forventede resultater, brukt til manuell kvalitetssikring av normalmodus mot ekte OpenAI-svar – se `TESTPLAN.md` i samme mappe for metodikken |
+| [`.logs/sondre-tveit-amundsen/issues.md`](.logs/sondre-tveit-amundsen/issues.md) | Samlet, løpende liste over åpne punkter og kjente begrensninger |
+| [`.logs/sondre-tveit-amundsen/`](.logs/sondre-tveit-amundsen/) | Detaljerte sesjonslogger (oppgave, plan, resultat) fra arbeidet med Claude Code |
+
+## Forutsetninger
+
+For å kjøre applikasjonen lokalt på en ren maskin må følgende være installert:
+
+- **Python 3.12 eller nyere** – `backend/.python-version` og `backend/pyproject.toml` krever `>=3.12`.
+- **[uv](https://docs.astral.sh/uv/getting-started/installation/)** – Pythons pakke- og prosjektverktøy, brukt til alt i `backend/` (installer- og oppstartskommandoer, lockfile).
+- **Node.js** `^20.19.0` eller `>=22.12.0`, med **npm** – krevd av Vite 8 (se `frontend/package.json`).
+
+Utviklet og testet med Python 3.12, uv 0.12.7, Node.js v26.7.0 og npm 11.19.0. Andre versjoner innenfor kravene over bør også fungere.
+
+Ingen database, Docker eller andre eksterne tjenester er nødvendig. **Demomodus krever ingen API-nøkkel og ingen betalt tjeneste** – se punkt 3 under.
+
 ## Kjøre applikasjonen lokalt
 
-Applikasjonen består av en React/Vite-frontend (`frontend/`) og en FastAPI-backend (`backend/`), som under lokal utvikling kjøres som to separate prosesser. **Demomodus** bruker en fast, fiktiv CV og stillingsannonse fra [`backend/test-data/`](backend/test-data/) og krever ingen API-nøkkel. **Normalmodus** sender din egen CV og stillingsannonse til en ekte språkmodell (OpenAI, `gpt-5.4-mini`) via backenden, og krever en API-nøkkel (se under).
+```bash
+git clone https://github.com/IBE160-2026/G02-amundsen.git
+cd G02-amundsen
+```
+
+Applikasjonen består av en React/Vite-frontend (`frontend/`) og en FastAPI-backend (`backend/`), som under lokal utvikling kjøres som to separate prosesser.
 
 ### 1. Start backend
 
@@ -22,9 +53,9 @@ uv sync
 uv run uvicorn app.main:app --reload
 ```
 
-Backenden kjører da på `http://127.0.0.1:8000`. `GET /api/analyze/demo` returnerer demoresultatet, og `http://127.0.0.1:8000/docs` viser API-dokumentasjonen.
+Backenden kjører da på `http://127.0.0.1:8000`. `GET /api/analyze/demo` returnerer demoresultatet uten API-nøkkel, og `http://127.0.0.1:8000/docs` viser API-dokumentasjonen.
 
-For å bruke normalmodus (`POST /api/analyze`) må du kopiere `backend/.env.example` til `backend/.env` og fylle inn en egen `OPENAI_API_KEY`. Denne filen skal **aldri** committes (den er dekket av `.gitignore`). Uten en nøkkel svarer `/api/analyze` med en tydelig feilmelding (HTTP 503), mens demomodus fortsatt fungerer som normalt.
+**For normalmodus** (`POST /api/analyze`) med egen OpenAI-nøkkel: kopier `backend/.env.example` til `backend/.env` og fyll inn din egen `OPENAI_API_KEY`. Denne filen skal **aldri** committes (den er dekket av `.gitignore`). Uten en nøkkel svarer `/api/analyze` med en tydelig feilmelding (HTTP 503) – demomodus fungerer uendret uansett.
 
 ### 2. Start frontend
 
@@ -40,13 +71,15 @@ Frontenden kjører da på `http://localhost:5173` og er satt opp til å kalle ba
 
 Backenden tillater CORS-forespørsler fra `http://localhost:5173` og `http://127.0.0.1:5173` i lokal utvikling, slik at frontend og backend kan kjøre som separate prosesser uten CORS-feil.
 
-### 3. Bruk demo- eller normalmodus i grensesnittet
+### 3. Bruk demomodus (ingen API-nøkkel, ingen kostnad)
 
-Åpne `http://localhost:5173` i nettleseren. Velg **Demomodus** og trykk **«Kjør demoanalyse»** for å se hovedflyten med fiktiv CV og stillingsannonse uten API-nøkkel, eller velg **Normalmodus**, lim inn din egen CV og stillingsannonse, og trykk **«Kjør analyse»**. Resultatet viser i begge tilfeller sentrale krav, relevante styrker, kompetansegap, CV-forslag med sporbarhet til CV og stillingsannonse, og et redigerbart søknadsutkast.
+Åpne `http://localhost:5173` i nettleseren, velg **Demomodus** og trykk **«Kjør demoanalyse»**. Dette er hvordan sensor kan teste hele hovedflyten uten egen API-nøkkel eller betalt tilgang til en språkmodell (jf. PRD NFR6). Resultatet viser en fast, fiktiv CV og stillingsannonse, sentrale krav, relevante styrker, kompetansegap, CV-forslag med sporbarhet til CV og stillingsannonse, og et redigerbart søknadsutkast.
 
-### 4. Test normalmodus direkte mot backend (uten frontend)
+### 4. Bruk normalmodus med egen OpenAI API-nøkkel
 
-Når `backend/.env` har en gyldig `OPENAI_API_KEY`:
+Når `backend/.env` har en gyldig `OPENAI_API_KEY` (se punkt 1): velg **Normalmodus** i grensesnittet, lim inn en egen CV og stillingsannonse, og trykk **«Kjør analyse»**. Resultatet har samme struktur som demomodus, men innholdet er generert av en ekte språkmodell.
+
+Normalmodus kan også kalles direkte mot backenden, uten frontend:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/analyze \
@@ -54,9 +87,9 @@ curl -X POST http://127.0.0.1:8000/api/analyze \
   -d '{"cv_text": "...", "job_ad_text": "..."}'
 ```
 
-Du kan også bruke `http://127.0.0.1:8000/docs` ("Try it out" på `POST /api/analyze`). Svaret har samme struktur som demomodus, men `mode` er `"normal"` og innholdet er generert av språkmodellen – med kildesitater som er kontrollert mot din CV/stillingsannonse (se `app/grounding.py`).
+Du kan også bruke `http://127.0.0.1:8000/docs` ("Try it out" på `POST /api/analyze`). Kildesitater i svaret er kontrollert mot CV-en/stillingsannonsen som faktisk ble sendt inn (se `backend/app/grounding.py`).
 
-### Kjøre tester
+### Kjøre automatiserte tester
 
 ```bash
 cd backend && uv run pytest
@@ -90,7 +123,8 @@ under `/api/*` rutes til FastAPI-backenden, resten rutes til React/Vite-frontend
   med din egen `OPENAI_API_KEY` (se "Kjøre applikasjonen lokalt" over).
 - **Kjent, åpent sikkerhetspunkt:** nøkkelen som ble brukt i produksjonstesten er ikke
   tilbakekalt hos OpenAI. Eldre Vercel-deployments kan i prinsippet fortsatt ha tilgang
-  til den, selv om den er fjernet fra gjeldende miljøkonfigurasjon. Se `issues.md`.
+  til den, selv om den er fjernet fra gjeldende miljøkonfigurasjon. Se
+  [`.logs/sondre-tveit-amundsen/issues.md`](.logs/sondre-tveit-amundsen/issues.md).
 
 ### Manuelt i Vercel (for å aktivere normalmodus i produksjon på nytt)
 
