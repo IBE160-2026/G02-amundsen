@@ -105,6 +105,27 @@ CV-dokumentasjon kan nå bekrefte en krav-kobling. Dette er bevisst en minimal
 endring – kun denne ene sammenligningen er justert – og er verifisert mot at
 legitime koblinger (bl.a. et kort fagord som "SQL", og overførbar erfaring
 fra en deltidsjobb) fortsatt fungerer, se `test_grounding.py`.
+
+En reell brukertest i lokal normalmodus (06.11.2026, anonymisert CV mot en
+Statnett-stillingsannonse for rådgiver/seniorrådgiver økonomi) avdekket en
+ny, konkret feil av samme familie: en styrke om generell arbeidskapasitet og
+evne til å håndtere flere oppgaver/tidsfrister ble koblet via
+`related_requirement_ids` til et spesifikt fagkrav om IT-økonomistyring og
+analyse av store datamengder – to temaer som ikke har noe reelt med
+hverandre å gjøre. Siden rå-svaret fra språkmodellen ikke logges (NFR3, se
+over), er det ikke mulig å fastslå det eksakte ordet som utløste koblingen
+med 100 % sikkerhet. Det som derimot ER sikkert, og direkte bekreftbart ved
+å kjøre `_shares_relevant_keyword` på representativ tekst: den generelle
+nøkkelord-heuristikken teller fortsatt enkelte brede, generiske ord om
+personlig kapasitet/arbeidsmengde (f.eks. "stor"/"store", "flere",
+"håndtere", "kapasitet", "tidsfrister") som et gyldig tematisk treff, selv
+om de ikke sier noe om et konkret fagområde – akkurat den typen ord som
+gjorde at en helt generell styrke matchet et helt spesifikt, teknisk krav.
+Disse er nå lagt til i `_GENERIC_WORDS`, i tråd med hvordan "erfaring",
+"kompetanse" osv. allerede ble utelukket av samme grunn. Dette er samme
+type (akseptert) begrensning som beskrevet over: en ren nøkkelord-heuristikk
+kan aldri garantere at ALLE slike svake koblinger fanges opp, bare at de
+konkret identifiserte tilfellene gjør det.
 """
 
 from __future__ import annotations
@@ -133,6 +154,13 @@ _GENERIC_WORDS = {
     "den", "din", "min", "sin", "god", "gode", "godt", "noe", "noen", "alle",
     "all", "men", "når", "hva", "hvem", "hvor", "samt", "også", "under",
     "over", "etter",
+    # Generelle ord om personlig kapasitet/arbeidsmengde (lagt til
+    # 06.11.2026 etter en reell brukertest, se modulens docstring): disse
+    # sier noe om MENGDE eller EVNE, ikke om et konkret fagområde, og kan
+    # derfor dukke opp i en styrke om nesten hva som helst – uten dem kunne
+    # en helt generell styrke matche et helt urelatert, spesifikt fagkrav.
+    "stor", "store", "flere", "håndtere", "håndtering", "håndterer",
+    "kapasitet", "tidsfrist", "tidsfrister", "mengde", "mengder", "samtidig",
 }
 
 

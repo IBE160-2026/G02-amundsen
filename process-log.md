@@ -846,3 +846,103 @@ dekket av en regresjonstest som beviselig fanger opp nøyaktig denne
 feilklassen. De to øvrige, mindre funnene fra samme testrunde (mangelfull
 anerkjennelse av enkelte reelle styrker i testsett 2 og 4) er fortsatt åpne
 og ikke del av denne rettingen.
+
+## 06.11.2026 – Reell brukertest i lokal normalmodus (anonymisert CV, Statnett-annonse)
+
+### Gjennomføringen
+
+Brukeren gjennomførte en reell test av normalmodus lokalt, med en
+anonymisert, ekte CV og en ekte stillingsannonse fra Statnett (rådgiver/
+seniorrådgiver økonomi og kostnadsoptimalisering). Selve CV-en og
+stillingsannonsen er, som alltid, ikke lagret noe sted i repositoriet
+(NFR3) – kun de funnene som ble rapportert, er dokumentert her, uten
+personopplysninger.
+
+Søknadsutkastet inneholdt ingen tydelig oppdiktet erfaring – selve
+hallusinasjonskontrollen fungerte altså som tiltenkt denne gangen. Tre mer
+spesifikke kvalitetsproblemer ble funnet:
+
+1. En styrke om generell arbeidskapasitet og evne til å håndtere flere
+   oppgaver/tidsfrister ble koblet (via `related_requirement_ids`) til et
+   spesifikt fagkrav om IT-økonomistyring og analyse av store datamengder –
+   en faglig svak kobling mellom en generell personlig egenskap og et
+   konkret fagkrav.
+2. Et sammensatt krav (IT-kostnadsmodeller, lisensforvaltning, analyse av
+   store datamengder) ble ikke tydelig fanget opp som manglende
+   dokumentasjon i CV-en – ingen av disse spesifikke, udokumenterte delene
+   ble presentert som egne kompetansegap.
+3. Et mastergrad-krav ble identifisert som et kompetansegap, men
+   stillingsannonsen åpnet selv for at relevant erfaring kunne kompensere
+   for en manglende mastergrad. Denne nyansen gikk tapt i resultatet.
+
+### Undersøkelse og årsak
+
+Funn 1 er, i likhet med de tidligere feilkoblingene (se forrige seksjoner),
+en svakhet i den deterministiske nøkkelord-heuristikken i
+`backend/app/grounding.py`. Siden rå-svaret fra språkmodellen bevisst ikke
+logges (NFR3), er det ikke mulig å fastslå det eksakte delte ordet med
+100 % sikkerhet. Det som ER bekreftet ved å kjøre koden direkte: heuristikken
+talte fortsatt flere brede, generiske ord om personlig kapasitet/mengde
+(bl.a. "stor"/"store", "håndtere", "tidsfrister") som et gyldig tematisk
+treff, uavhengig av fagområde – nøyaktig den typen svakhet som kan forklare
+at en helt generell styrke matchet et helt spesifikt, teknisk krav.
+
+Funn 2 og 3 kan derimot IKKE rettes i `grounding.py`: modulen luker bare bort
+feilaktige koblinger og ugrunnede sitater i et svar som allerede er
+mottatt – den kan ikke få modellen til å nevne noe den har utelatt helt
+(funn 2), eller til å beholde en nyanse den har glattet over (funn 3).
+Begge er egenskaper ved selve språkmodell-svaret, og kan derfor kun
+adresseres i prompten (`backend/app/prompts.py`).
+
+### Endringene
+
+- **`backend/app/grounding.py`**: `_GENERIC_WORDS` er utvidet med ord om
+  personlig kapasitet/arbeidsmengde ("stor", "store", "flere", "håndtere",
+  "håndtering", "håndterer", "kapasitet", "tidsfrist", "tidsfrister",
+  "mengde", "mengder", "samtidig"), slik at disse ikke lenger kan utløse en
+  krav-kobling på egen hånd. Minimal endring, samme prinsipp som tidligere
+  utvidelser av samme liste.
+- **`backend/app/prompts.py`**: to nye regler (9 og 10) i systemprompten.
+  Regel 9 ber modellen vurdere hvert krav for seg, og presentere hver
+  spesifikke, udokumenterte del av et sammensatt krav som et eget
+  kompetansegap – ikke utelate eller dekke det vagt. Regel 10 ber modellen
+  ta med en eventuell "kan kompenseres av relevant erfaring"-nyanse fra
+  stillingsannonsen i kravets og/eller gapets beskrivelse, i stedet for å
+  fremstille kravet som absolutt.
+
+### Testing og kvalitetssikring
+
+- Ny regresjonstest (`test_strength_real_user_test_case_generic_capacity_is_not_linked_to_specific_requirement`)
+  gjenskaper funn 1 med syntetisk, oppdiktet CV-/annonsetekst (ikke den
+  virkelige CV-en). Bekreftet manuelt at testen **feilet før** utvidelsen av
+  `_GENERIC_WORDS` (koblingen ble feilaktig beholdt) og **består etter**.
+  En egen, direkte test av `_shares_relevant_keyword` dekker samme
+  rotårsak uten omveien via `enforce_grounding`.
+- Full backend-testsuite: **83 av 83 bestått** (opp fra 81 – de to nye
+  testene). Frontend-testsuiten: **23 av 23 bestått** (uendret, ingen
+  frontend-endringer i denne rettingen).
+- Ingen nye OpenAI-kall ble gjort i denne økten, og ingen betalt tjeneste ble
+  brukt.
+
+### Kritisk vurdering – hva som IKKE kan garanteres uten en ny KI-test
+
+Rettingen av funn 1 (`grounding.py`) er deterministisk og bevist med en
+regresjonstest, på samme måte som tidligere rettinger i denne modulen.
+
+Rettingen av funn 2 og 3 (nye regler i `prompts.py`) er derimot **ikke**
+verifisert mot et nytt, ekte OpenAI-kall i denne økten, fordi oppgaven
+eksplisitt forbød nye API-kall. Det kan derfor IKKE garanteres at
+språkmodellen faktisk følger de to nye reglene bedre enn før – kun at
+reglene er lagt til, er språklig presise, og er direkte motivert av de
+konkrete funnene over. Dette må bekreftes med en ny, reell test i
+normalmodus (lokalt, med en betalt API-nøkkel) før man kan si noe sikkert om
+effekten. Dette er bevisst dokumentert som en åpen begrensning, ikke
+underslått.
+
+### Status
+
+Funn 1 er rettet og bevist med en regresjonstest. Funn 2 og 3 er adressert
+med målrettede, begrunnede promptendringer, men virkningen av disse er
+ubekreftet til en ny, reell KI-test er kjørt. Ingen eksisterende
+funksjonalitet eller sporbarhet er endret – kun `_GENERIC_WORDS` og
+systemprompten er utvidet.

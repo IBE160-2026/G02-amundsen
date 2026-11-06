@@ -29,7 +29,9 @@ CV_TEXT = (
     "Erfaring med Python og JavaScript.\n"
     "Kundeservice og opplæring av nyansatte i deltidsjobb.\n"
     "Grunnleggende kunnskap i SQL fra et skoleprosjekt.\n"
-    "Liker å bruke digitale verktøy i det daglige arbeidet."
+    "Liker å bruke digitale verktøy i det daglige arbeidet.\n"
+    "Stor arbeidskapasitet og evne til å håndtere store mengder "
+    "arbeidsoppgaver og tidsfrister samtidig."
 )
 JOB_AD_TEXT = (
     "Vi søker en utvikler.\n"
@@ -37,7 +39,9 @@ JOB_AD_TEXT = (
     "Krever erfaring med Power BI for rapportering.\n"
     "Krever god kjennskap til SQL for rapportering.\n"
     "Gode kommunikasjonsevner er ønskelig.\n"
-    "Krever erfaring med prosjektstyringsverktøy som Jira eller Trello."
+    "Krever erfaring med prosjektstyringsverktøy som Jira eller Trello.\n"
+    "Krever erfaring med IT-kostnadsmodeller, lisensforvaltning og "
+    "analyse av store datamengder."
 )
 
 
@@ -373,6 +377,59 @@ def test_strength_related_requirement_link_survives_for_transferable_experience(
 
     assert len(cleaned.strengths) == 1
     assert cleaned.strengths[0].related_requirement_ids == ["jr_cs"]
+
+
+def test_strength_real_user_test_case_generic_capacity_is_not_linked_to_specific_requirement():
+    """Speiler en reell brukertest i lokal normalmodus (06.11.2026, anonymisert
+    CV mot en Statnett-stillingsannonse): en styrke om generell
+    arbeidskapasitet/evne til å håndtere flere oppgaver og tidsfrister ble
+    koblet til et helt urelatert, spesifikt fagkrav om IT-økonomistyring og
+    analyse av store datamengder. De to tekstene deler kun brede, generiske
+    ord om mengde/kapasitet ("store") – ikke noe faktisk fagord – og skal
+    derfor ikke telle som en reell tematisk kobling (se `app/grounding.py`
+    sin docstring for hvilke ord som ble lagt til `_GENERIC_WORDS` for dette)."""
+
+    it_cost_requirement = JobRequirement(
+        id="jr_it_cost",
+        description=(
+            "Krever erfaring med IT-kostnadsmodeller, lisensforvaltning og "
+            "analyse av store datamengder"
+        ),
+    )
+    strength = Strength(
+        id="s_kapasitet",
+        description=(
+            "Stor arbeidskapasitet og evne til å håndtere store mengder "
+            "arbeidsoppgaver og tidsfrister samtidig"
+        ),
+        related_requirement_ids=["jr_it_cost"],
+        source=SourceReference(
+            cv_excerpt=(
+                "Stor arbeidskapasitet og evne til å håndtere store mengder "
+                "arbeidsoppgaver og tidsfrister samtidig"
+            ),
+            job_ad_excerpt=None,
+        ),
+    )
+    result = _result(strengths=[strength], job_requirements=[it_cost_requirement])
+
+    cleaned = enforce_grounding(result, cv_text=CV_TEXT, job_ad_text=JOB_AD_TEXT)
+
+    # Styrken vises fortsatt (sitatet er ekte) – det er bare den misvisende
+    # krav-koblingen som skal forsvinne.
+    assert len(cleaned.strengths) == 1
+    assert cleaned.strengths[0].related_requirement_ids == []
+
+
+def test_shares_relevant_keyword_false_for_generic_capacity_words_alone():
+    """Direkte regresjonstest for selve rotårsaken i testen over: ordene
+    "stor"/"store", "håndtere", "tidsfrister" osv. er generelle nok til at de
+    IKKE skal telle som et reelt tematisk treff på egen hånd."""
+
+    a = "Stor arbeidskapasitet og evne til å håndtere flere oppgaver og tidsfrister samtidig"
+    b = "Krever erfaring med analyse av store datamengder"
+
+    assert _shares_relevant_keyword(a, b) is False
 
 
 def test_suggestion_mirrors_qa_report_case_3_irrelevant_cv_excerpt_is_dropped():
