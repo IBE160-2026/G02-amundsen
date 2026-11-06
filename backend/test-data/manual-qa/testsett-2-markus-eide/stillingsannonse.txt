@@ -1,0 +1,25 @@
+Stillingsannonse: Junior dataanalytiker – Nordkyst Innsikt AS (fiktiv bedrift)
+
+Nordkyst Innsikt AS hjelper kunder med å forstå egne data, og søker en junior
+dataanalytiker til kontoret i Trondheim.
+
+Om stillingen
+Du vil bistå med datauttrekk, enkel analyse og presentasjon av resultater for
+kunder i ulike bransjer.
+
+Vi søker deg som har
+- Bachelorgrad innen økonomi, markedsføring, samfunnsvitenskap eller tilsvarende
+- Grunnleggende kunnskap i SQL for datauttrekk
+- Kjennskap til Python eller R for dataanalyse
+- Interesse for å arbeide med data
+
+Det er en fordel om du har
+- Erfaring med Power BI eller Tableau
+- Grunnleggende kunnskap i statistikk eller metode
+- Gode kommunikasjons- og presentasjonsferdigheter
+
+Vi tilbyr
+- Opplæring i verktøyene vi bruker
+- Tett samarbeid med erfarne analytikere
+
+Søknadsfrist: 15. desember 2026
