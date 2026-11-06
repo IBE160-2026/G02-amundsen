@@ -29,3 +29,36 @@ Nye filer (alle usporet, ikke committet av meg):
 ### Åpne punkter
 - De fire testsettene er ikke kjørt mot ekte OpenAI ennå – det er neste steg, og skal gjøres av brukeren (eller av meg på eksplisitt oppfordring senere), én gang per sett, med resultatene dokumentert ved siden av de nå låste forventningene.
 - Øvrige åpne punkter fra sluttkontrollen (manglende forutsetninger i README, ødelagt kodeblokk i `architecture.md`, manglende wireframe, m.m.) er uendret og ikke del av denne økten.
+
+## 2026-11-06 kl. 12:51 — Sondre Tveit Amundsen
+
+### Oppgave
+Gjennomføre selve testkjøringen fra forrige seksjon: kjøre normalmodus mot testsett 2, 3 og 4 (ikke 1, som gjenbruker eksisterende, allerede validerte demodata) med ekte OpenAI-kall gjennom den lokale backenden (`backend/.env`), sammenligne resultatene mot de låste forventningene i `forventet-resultat.md`, og dokumentere avvik ærlig – inkludert akseptabel KI-variasjon. Maks tre betalte kall uten ny godkjenning; ingen kodeendring under selve testingen.
+
+### Plan
+- Bekreftet at `backend/.env` har en konfigurert `OPENAI_API_KEY` uten å vise verdien, og at `uv run pytest` fortsatt var grønt (78/78) før noe ekte kall.
+- Startet backenden lokalt på en egen port, og kjørte nøyaktig tre ekte `POST /api/analyze`-kall (ett per testsett 2–4) via et lite Python-skript som leser `cv.txt`/`stillingsannonse.txt` direkte og bygger JSON-payloaden korrekt (unngår skall-escaping-problemer med flerlinjetekst). Alle tre kall ga HTTP 200 på første forsøk – ingen retries var nødvendig.
+- Lagret rå JSON-svar som `resultat-2026-11-06.json` i hvert testsetts mappe.
+- Gjennomgikk hvert svar manuelt mot `forventet-resultat.md`: kontrollerte at alle krav ble identifisert, at ingen punkt på «må aldri påstås»-listen forekom i fri tekst, og at **hvert enkelt** `cv_excerpt`/`job_ad_excerpt` faktisk er et ordrett sitat fra kildetekstene (kontrollert manuelt, ikke bare stolt på backendens egen `grounding.py`).
+- Skrev en kort, konkret `vurdering-2026-11-06.md` per testsett.
+- Fant et konkret, bekreftet avvik i testsett 4: en vag styrke ("digitale verktøy") ble koblet via `related_requirement_ids` til det spesifikke Jira/Trello-kravet. Undersøkte årsaken i `grounding.py` sin kildekode (ikke gjettet): modellen satte `job_ad_excerpt` til nøyaktig kravets egen beskrivelsestekst, noe som gjør nøkkelord-overlapp-kontrollen i `_filter_related_requirement_ids` selvreferensiell og dermed virkningsløs for dette konkrete tilfellet.
+- Oppdaterte `process-log.md` med en samlet, ærlig oppsummering av alle tre testsettene, inkludert det bekreftede avviket og et gjennomgående mønster (reelt CV-innhold som ikke alltid anerkjennes som en bekreftet styrke, sett i to av tre testsett).
+- Stoppet den lokale backend-serveren igjen. Kjørte `uv run pytest` og `git diff --stat` på `backend/app`/`frontend/src`/`vercel.json` for å bekrefte at ingen applikasjonskode ble endret under testingen.
+
+### Resultat
+Nye filer (ukommittert av meg, per instruks):
+- `backend/test-data/manual-qa/testsett-2-markus-eide/{resultat-2026-11-06.json, vurdering-2026-11-06.md}`
+- `backend/test-data/manual-qa/testsett-3-sara-lund/{resultat-2026-11-06.json, vurdering-2026-11-06.md}`
+- `backend/test-data/manual-qa/testsett-4-thomas-berg/{resultat-2026-11-06.json, vurdering-2026-11-06.md}`
+
+Endret fil: `process-log.md` (ny seksjon, ukommittert av meg).
+
+**Utfall:** testsett 2 – bestått med mindre avvik; testsett 3 – bestått, uten avvik av betydning; testsett 4 – avvik funnet (se over). Ingen av de tre svarene brøt noen «må aldri påstås»-liste i fri tekst; alle kildesitater i alle tre svar ble bekreftet ekte og ordrette.
+
+Nøyaktig 3 ekte, betalte API-kall ble gjort (grensen uten ny godkjenning). Ingen applikasjonskode, modell, prompt eller forventede resultater ble endret under testingen (bekreftet med `git diff --stat`). Ingen Vercel-endring. API-nøkkelen ble ikke vist, kopiert eller logget noe sted. Ingen av testresultat-/dokumentasjonsfilene eller `process-log.md` er committet av meg (på brukerens eksplisitte instruks) – kun denne loggfilen og `issues.md` committes av `sesjonslogg`-skillen.
+
+### Åpne punkter
+- **Anbefalt kodefiks, ikke implementert:** stram inn `_filter_related_requirement_ids` i `grounding.py` slik at kravets egen `job_ad_excerpt` ikke kan "bekrefte" en krav-kobling uten at `cv_excerpt` spesifikt er relevant for kravet. Bør dekkes av en ny, målrettet regresjonstest som speiler akkurat testsett 4-tilfellet.
+- Mønsteret med at reelt CV-innhold noen ganger ikke anerkjennes som en bekreftet styrke (sett i testsett 2 og 4) bør følges med på ved videre testing, men er ikke nødvendigvis en feil som skal rettes isolert.
+- Testsett 1 er ikke kjørt denne runden (gjenbruker eksisterende, validert demodata – ingen ny kjøring nødvendig).
+- Øvrige, tidligere åpne punkter er uendret, se `issues.md`.
